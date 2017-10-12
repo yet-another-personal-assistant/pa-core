@@ -8,7 +8,7 @@ import subprocess
 import sys
 import time
 
-from router.routing import Faucet, Router, PipeFaucet, Sink, PipeSink, Rule, SocketFaucet
+from router.routing import Faucet, Router, PipeFaucet, Sink, PipeSink, Rule, SocketFaucet, SocketSink
 
 
 class OldTgFaucet(SocketFaucet):
@@ -37,6 +37,16 @@ class OldTgFaucet(SocketFaucet):
             line = line[8:].strip()
         return {"from": {"media": "telegram", "id": self._owner},
                 "text": line}
+
+
+class OldTgSink(SocketSink):
+
+    def write(self, message):
+        """Almost exact copy of SocketSink.write"""
+        try:
+            self._sock.send("message: {}\n".format(message['text']).encode())
+        except BrokenPipeError:
+            raise EndpointClosedException()
 
 
 class TgFaucet(Faucet):
@@ -80,7 +90,6 @@ def main(owner_id, sock_name):
 
     if False:
         tg_proc = subprocess.Popen([".env/bin/python3", "single_stdio.py"],
-                                bufsize=1,
                                 cwd="tg",
                                 stdout=subprocess.PIPE,
                                 stdin=subprocess.PIPE)
@@ -88,7 +97,6 @@ def main(owner_id, sock_name):
         faucet = TgFaucet(PipeFaucet(tg_proc.stdout.fileno()))
     else:
         tg_proc = subprocess.Popen([".env/bin/python3", "pa.py"],
-                                   bufsize=1,
                                    cwd="tg")
         sock = socket.socket(socket.AF_UNIX)
         path = "tg/"+sock_name
@@ -97,10 +105,27 @@ def main(owner_id, sock_name):
             time.sleep(1)
         sock.connect(path)
         faucet = OldTgFaucet(sock, owner_id)
+        router.add_sink(OldTgSink(sock), "tg")
     atexit.register(tg_proc.terminate)
     router.add_faucet(faucet, "tg")
-    router.add_rule(Rule('from_me', id=owner_id), 'tg')
+    router.add_rule(Rule('brain', id=owner_id), 'tg')
 
+    brain_sock_path = "brain/socket"
+    if os.path.exists(brain_sock_path):
+        os.unlink(brain_sock_path)
+    brain_proc = subprocess.Popen(["sbcl", "--script", "run.lisp", "--socket", "socket"],
+                                  cwd="brain")
+    atexit.register(brain_proc.terminate)
+
+    brain_sock = socket.socket(socket.AF_UNIX)
+    logging.getLogger("main").info("connecting to %s", brain_sock_path)
+    while not os.path.exists(brain_sock_path):
+        time.sleep(1)
+    brain_sock.connect(brain_sock_path)
+    router.add_sink(SocketSink(brain_sock), "brain")
+
+    router.add_faucet(SocketFaucet(brain_sock), "brain")
+    router.add_rule(Rule("tg"), "brain")
     while True:
         router.tick()
         time.sleep(1)
