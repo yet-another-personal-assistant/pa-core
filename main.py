@@ -38,6 +38,10 @@ class OldTgFaucet(SocketFaucet):
         return {"from": {"media": "telegram", "id": self._owner},
                 "text": line}
 
+    @staticmethod
+    def factory(owner_id):
+        return lambda sock: OldTgFaucet(sock, owner_id)
+
 
 class OldTgSink(SocketSink):
 
@@ -64,14 +68,15 @@ class TgFaucet(Faucet):
 
 class TgSink(Sink):
 
-    def __init__(self, base_sink):
+    def __init__(self, base_sink, owner_id):
         self._base = base_sink
+        self._owner = owner_id
 
     def write(self, message):
         if 'chat_id' not in message:
-            message['chat_id'] = 43543351
+            message['chat_id'] = owner_id
             message['text'] = "Не знаю, кому отправить: {}".format(message['text'])
-        super().write(message)
+        self._base.write(message)
 
 
 class DumpSink(Sink):
@@ -83,56 +88,64 @@ class DumpSink(Sink):
         self._logger.debug("Dropped %s", message)
 
 
-def main(owner_id, sock_name):
+def add_endpoint(router, endpoint_name, command, cwd, sock_path,
+                 faucet_factory=SocketFaucet,
+                 sink_factory=SocketSink):
+    if not os.path.isabs(sock_path):
+        sock_path = os.path.join(cwd, sock_path)
+    if os.path.exists(sock_path):
+        os.unlink(sock_path)
+    proc = subprocess.Popen(command, cwd=cwd)
+    atexit.register(proc.terminate)
+
+    sock = socket.socket(socket.AF_UNIX)
+    logging.getLogger("main").info("connecting to %s for endpoint %s", sock_path, endpoint_name)
+    while not os.path.exists(sock_path):
+        time.sleep(1)
+    sock.connect(sock_path)
+    router.add_sink(SocketSink(sock), endpoint_name)
+    router.add_faucet(SocketFaucet(sock), endpoint_name)
+
+
+def main(owner_id, sock_name, friends):
     logger = logging.getLogger("router")
     router = Router(DumpSink('dumped'))
     router.add_sink(DumpSink('seen'), 'from_me')
 
-    if False:
+    if True:
         tg_proc = subprocess.Popen([".env/bin/python3", "single_stdio.py"],
-                                cwd="tg",
-                                stdout=subprocess.PIPE,
-                                stdin=subprocess.PIPE)
+                                   cwd="tg",
+                                   stdout=subprocess.PIPE,
+                                   stdin=subprocess.PIPE)
 
-        faucet = TgFaucet(PipeFaucet(tg_proc.stdout.fileno()))
+        atexit.register(tg_proc.terminate)
+        router.add_faucet(TgFaucet(PipeFaucet(tg_proc.stdout.fileno())), "tg")
+        router.add_sink(TgSink(PipeSink(tg_proc.stdin.fileno()), owner_id), "tg")
     else:
-        tg_proc = subprocess.Popen([".env/bin/python3", "pa.py"],
-                                   cwd="tg")
-        sock = socket.socket(socket.AF_UNIX)
-        path = "tg/"+sock_name
-        logging.getLogger("main").info("connecting to %s", path)
-        while not os.path.exists(path):
-            time.sleep(1)
-        sock.connect(path)
-        faucet = OldTgFaucet(sock, owner_id)
-        router.add_sink(OldTgSink(sock), "tg")
-    atexit.register(tg_proc.terminate)
-    router.add_faucet(faucet, "tg")
-    router.add_rule(Rule('brain', id=owner_id), 'tg')
+        add_endpoint(router, "tg",
+                     command=[".env/bin/python3", "pa.py", "--no-greet"],
+                     cwd="tg",
+                     sock_path=sock_name,
+                     faucet_factory=OldTgFaucet.factory(owner_id),
+                     sink_factory=OldTgSink)
 
-    brain_sock_path = "brain/socket"
-    if os.path.exists(brain_sock_path):
-        os.unlink(brain_sock_path)
-    brain_proc = subprocess.Popen(["sbcl", "--script", "run.lisp", "--socket", "socket"],
-                                  cwd="brain")
-    atexit.register(brain_proc.terminate)
-
-    brain_sock = socket.socket(socket.AF_UNIX)
-    logging.getLogger("main").info("connecting to %s", brain_sock_path)
-    while not os.path.exists(brain_sock_path):
-        time.sleep(1)
-    brain_sock.connect(brain_sock_path)
-    router.add_sink(SocketSink(brain_sock), "brain")
-
-    router.add_faucet(SocketFaucet(brain_sock), "brain")
-    router.add_rule(Rule("tg"), "brain")
+    for user in (owner_id, *friends):
+        endpoint_name = "brain{}".format(user)
+        socket_name = "socket{}".format(user)
+        add_endpoint(router, endpoint_name,
+                     command=["sbcl", "--script", "run.lisp", "--socket", socket_name, "--tg-owner", str(user)],
+                     cwd="brain",
+                     sock_path=socket_name)
+        router.add_rule(Rule("tg"), endpoint_name)
+        router.add_rule(Rule(endpoint_name, id=user), 'tg')
     while True:
         router.tick()
-        time.sleep(1)
+        time.sleep(0.2)
 
 
 if __name__ == '__main__':
     sock_name = "socket"
+    friends = []
     with open('tg/token.txt') as token_file:
         for line in token_file:
             key, value = line.split()
@@ -140,6 +153,8 @@ if __name__ == '__main__':
                 owner_id = int(value)
             elif key == 'SOCKET':
                 sock_name = value.strip()
+            elif key == 'FRIEND':
+                friends.append(int(value))
     logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
     logging.getLogger("dump").setLevel(logging.DEBUG)
-    main(owner_id, sock_name)
+    main(owner_id, sock_name, friends)
