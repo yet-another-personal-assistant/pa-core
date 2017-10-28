@@ -7,8 +7,10 @@ import socket
 import subprocess
 import sys
 import time
+import yaml
 
 from router.routing import Faucet, Router, PipeFaucet, Sink, PipeSink, Rule, SocketFaucet, SocketSink
+from router.routing.runner import Runner
 
 
 class TgFaucet(Faucet):
@@ -37,6 +39,36 @@ class TgSink(Sink):
         self._base.write(message)
 
 
+class TelegramToBrainRule(Rule):
+
+    def __init__(self, tg_users):
+        base = super(TelegramToBrainRule, self)
+        base.__init__(target="brain", media="telegram")
+        self._len += 1
+        self._tg_users = {**tg_users}
+
+    def target_for(self, message):
+        source = message['from']
+        if source.get('media') == "telegram" and "id" in source:
+            return self._tg_users.get(source['id'])
+
+
+def make_brain_factory(configs, runner):
+    def instantiate_brain(router, brain_name):
+        logging.getLogger("brain factory").debug("Checking if we should wake up brain %s",
+                                                brain_name)
+        if brain_name in configs: # it isn't started, that's why we are here
+            router.add_rule(Rule("tg"), brain_name)
+            runner.ensure_running("brain",
+                                  alias=brain_name,
+                                  with_args=["--socket", brain_name,
+                                             "--config", configs[brain_name].file],
+                                  socket=os.path.join("brain", brain_name))
+            router.add_sink(runner.get_sink(brain_name), brain_name)
+            router.add_faucet(runner.get_faucet(brain_name), brain_name)
+    return instantiate_brain
+
+
 class DumpSink(Sink):
 
     def __init__(self, logname):
@@ -46,31 +78,48 @@ class DumpSink(Sink):
         self._logger.debug("Dropped %s", message)
 
 
-def add_endpoint(router, endpoint_name, command, cwd, sock_path,
-                 faucet_factory=SocketFaucet,
-                 sink_factory=SocketSink,
-                 just_start=False):
-    if not os.path.isabs(sock_path):
-        sock_path = os.path.join(cwd, sock_path)
-    if os.path.exists(sock_path):
-        os.unlink(sock_path)
-    proc = subprocess.Popen(command, cwd=cwd)
-    atexit.register(proc.terminate)
+class UserConfig:
 
-    sock = socket.socket(socket.AF_UNIX)
-    logging.getLogger("main").info("connecting to %s for endpoint %s", sock_path, endpoint_name)
-    while not os.path.exists(sock_path):
-        time.sleep(1)
-    if not just_start:
-        sock.connect(sock_path)
-        router.add_sink(SocketSink(sock), endpoint_name)
-        router.add_faucet(SocketFaucet(sock), endpoint_name)
+    def __init__(self, filename):
+        self._filename = os.path.abspath(filename)
+        with open(filename) as user_config:
+            self._config = yaml.load(user_config)
+
+    @property
+    def telegram(self):
+        return self._config.get('telegram')
+
+    @property
+    def file(self):
+        return self._filename
+
+
+class MyRouter(Router):
+
+    def __init__(self):
+        super().__init__(DumpSink('dumped'))
 
 
 def main(owner_id, args, friends):
-    logger = logging.getLogger("router")
-    router = Router(DumpSink('dumped'))
-    router.add_sink(DumpSink('seen'), 'from_me')
+    router = MyRouter()
+    runner = Runner()
+    runner.load("modules.yml")
+
+    tg_users = {}
+    configs = {}
+    for num, user_file_name in enumerate(os.listdir(args.users)):
+        brain_name = 'brain{}'.format(num)
+        if not user_file_name.endswith(".yml"):
+            continue
+        file_path = os.path.join(args.users, user_file_name)
+        config = UserConfig(file_path)
+        if config.telegram is not None:
+            tg_users[config.telegram] = brain_name
+            if config.telegram == owner_id:
+                owner_brain = brain_name
+        configs[brain_name] = config
+    router.add_sink_factory(make_brain_factory(configs, runner))
+    router.add_rule(TelegramToBrainRule(tg_users), 'tg')
 
     incoming = args.incoming
     if os.path.exists(incoming):
@@ -80,35 +129,18 @@ def main(owner_id, args, friends):
     atexit.register(lambda: os.unlink(incoming))
     router.add_faucet(PipeFaucet(incoming_fd), "incoming")
 
-    tg_proc = subprocess.Popen([".env/bin/python3", "single_stdio.py",
-                                "--token-file", os.path.abspath(args.token)],
-                                cwd="tg",
-                                stdout=subprocess.PIPE,
-                                stdin=subprocess.PIPE)
+    runner.ensure_running("telegram", with_args=["--token-file",
+                                                 os.path.abspath(args.token)])
 
-    atexit.register(tg_proc.terminate)
-    router.add_faucet(TgFaucet(PipeFaucet(tg_proc.stdout.fileno())), "tg")
-    router.add_sink(TgSink(PipeSink(tg_proc.stdin.fileno()), owner_id), "tg")
+    atexit.register(runner.terminate, "telegram")
+    router.add_faucet(TgFaucet(runner.get_faucet("telegram")), "tg")
+    router.add_sink(TgSink(runner.get_sink("telegram"), owner_id), "tg")
 
-    add_endpoint(router, "pa2human",
-                 command=[".env/bin/python3", "translator.py"],
-                 cwd="pa2human",
-                 sock_path="/tmp/tr_socket",
-                 just_start=True)
+    if not args.no_translator:
+        runner.ensure_running("translator")
 
-    for user in (owner_id, *friends):
-        endpoint_name = "brain{}".format(user)
-        socket_name = "socket{}".format(user)
-        add_endpoint(router, endpoint_name,
-                     command=["sbcl", "--script", "run.lisp",
-                              "--socket", socket_name,
-                              "--tg-owner", str(user)],
-                     cwd="brain",
-                     sock_path=socket_name)
-        router.add_rule(Rule("tg"), endpoint_name)
-        router.add_rule(Rule(endpoint_name, id=user), 'tg')
+    router.add_rule(Rule(owner_brain), 'incoming')
 
-    router.add_rule(Rule("brain{}".format(owner_id)), 'incoming')
     while True:
         router.tick()
         time.sleep(0.2)
@@ -119,6 +151,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Personal assistant message router")
     parser.add_argument("--token", default="token.txt", help="Telegram token file")
     parser.add_argument("--incoming", default="/tmp/pa_incoming", help="Local incoming pipe")
+    parser.add_argument("--users", default="users", help="Path to user configuration files")
+    parser.add_argument("--no-translator", default=False, action='store_const',
+                        const=True, help="Do not start translator module")
     logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
     logging.getLogger('router').setLevel(logging.DEBUG)
     logging.getLogger('asyncio').setLevel(logging.WARNING)

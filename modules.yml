@@ -1,0 +1,13 @@
+telegram:
+  command: .env/bin/python3 single_stdio.py
+  cwd: tg
+  type: stdio
+brain:
+  command: sbcl --script run.lisp
+  type: socket
+  cwd: brain
+translator:
+  command: .env/bin/python3 translator.py
+  type: socket
+  socket: /tmp/tr_socket
+  cwd: pa2human
