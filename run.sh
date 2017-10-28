@@ -1,5 +1,7 @@
 #!/bin/bash
 
+THISDIR=$(dirname $0)
+
 SESSION=assistant
 
 if ! (pgrep tmux && tmux has-session -t $SESSION) ; then
@@ -14,4 +16,4 @@ send_line() {
     tmux send-keys -t $SESSION Enter
 }
 
-send_line "cd ~/Projects/pa; .env/bin/python3 ./main.py"
+send_line "cd $THISDIR; .env/bin/python3 ./main.py"
