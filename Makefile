@@ -4,10 +4,10 @@ run:
 	./run.sh
 
 niege:
-	-./main.py
+	-./main.py --name Niege
 
 lexi:
-	-./main.py --incoming incoming --no-translator
+	-./main.py --incoming incoming --no-translator --name Lexi
 
 update: $(addprefix UPDATE_, $(PYTHON_MODULES)) UPDATE_core
 

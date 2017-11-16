@@ -7,6 +7,8 @@ import sys
 import time
 import yaml
 
+import notify2
+
 from router.routing import Faucet, Router, PipeFaucet, Sink, PipeSink, Rule, SocketFaucet, SocketSink
 from router.routing.runner import Runner
 
@@ -97,6 +99,15 @@ class MyRouter(Router):
         super().__init__(DumpSink('dumped'))
 
 
+class NotifierSink(Sink):
+
+    def __init__(self, name):
+        self._name = name
+
+    def write(self, message):
+        notify2.Notification(self._name, message['text']).show()
+
+
 def main(owner_id, args, friends):
     router = MyRouter()
     runner = Runner()
@@ -138,6 +149,9 @@ def main(owner_id, args, friends):
 
     router.add_rule(Rule(owner_brain), 'incoming')
 
+    notify2.init("PA")
+    router.add_sink(NotifierSink(args.name), "notify")
+
     while True:
         router.tick()
         time.sleep(0.2)
@@ -146,6 +160,7 @@ def main(owner_id, args, friends):
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description="Personal assistant message router")
+    parser.add_argument("--name", default="pa", help="Personal Assistant name")
     parser.add_argument("--token", default="token.txt", help="Telegram token file")
     parser.add_argument("--incoming", default="/tmp/pa_incoming", help="Local incoming pipe")
     parser.add_argument("--users", default="users", help="Path to user configuration files")
