@@ -3,8 +3,6 @@
 import atexit
 import logging
 import os
-import socket
-import subprocess
 import sys
 import time
 import yaml
@@ -28,15 +26,15 @@ class TgFaucet(Faucet):
 
 class TgSink(Sink):
 
-    def __init__(self, base_sink, owner_id):
+    def __init__(self, base_sink):
         self._base = base_sink
-        self._owner = owner_id
+        self._logger = logging.getLogger("tg_sink")
 
     def write(self, message):
-        if 'chat_id' not in message:
-            message['chat_id'] = owner_id
-            message['text'] = "Не знаю, кому отправить: {}".format(message['text'])
-        self._base.write(message)
+        if 'chat_id' in message:
+            self._base.write(message)
+        else:
+            self._logger.warning("No chat_id set for message [%s]", message['text'])
 
 
 class TelegramToBrainRule(Rule):
@@ -58,7 +56,6 @@ def make_brain_factory(configs, runner):
         logging.getLogger("brain factory").debug("Checking if we should wake up brain %s",
                                                 brain_name)
         if brain_name in configs: # it isn't started, that's why we are here
-            router.add_rule(Rule("tg"), brain_name)
             runner.ensure_running("brain",
                                   alias=brain_name,
                                   with_args=["--socket", brain_name,
@@ -119,7 +116,7 @@ def main(owner_id, args, friends):
                 owner_brain = brain_name
         configs[brain_name] = config
     router.add_sink_factory(make_brain_factory(configs, runner))
-    router.add_rule(TelegramToBrainRule(tg_users), 'tg')
+    router.add_rule(TelegramToBrainRule(tg_users), 'telegram')
 
     incoming = args.incoming
     if os.path.exists(incoming):
@@ -133,8 +130,8 @@ def main(owner_id, args, friends):
                                                  os.path.abspath(args.token)])
 
     atexit.register(runner.terminate, "telegram")
-    router.add_faucet(TgFaucet(runner.get_faucet("telegram")), "tg")
-    router.add_sink(TgSink(runner.get_sink("telegram"), owner_id), "tg")
+    router.add_faucet(TgFaucet(runner.get_faucet("telegram")), "telegram")
+    router.add_sink(TgSink(runner.get_sink("telegram")), "telegram")
 
     if not args.no_translator:
         runner.ensure_running("translator")
