@@ -22,8 +22,9 @@ class TgFaucet(Faucet):
         event = self._base.read()
         if event and 'message' in event:
             message = event['message']
-            message['from']['media'] = 'telegram'
-            return message
+            if 'chat' in message and message['chat'].get('type') == "private":
+                message['from']['media'] = 'telegram'
+                return message
 
 
 class TgSink(Sink):
