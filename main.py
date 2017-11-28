@@ -7,6 +7,7 @@ import sys
 import time
 import yaml
 
+from dbus.exceptions import DBusException
 import notify2
 
 from router.routing import Faucet, Router, PipeFaucet, Sink, PipeSink, Rule, SocketFaucet, SocketSink
@@ -150,8 +151,11 @@ def main(owner_id, args, friends):
 
     router.add_rule(Rule(owner_brain), 'incoming')
 
-    notify2.init("PA")
-    router.add_sink(NotifierSink(args.name), "notify")
+    try:
+        notify2.init("PA")
+        router.add_sink(NotifierSink(args.name), "notify")
+    except DBusException:
+        logging.getLogger('main').error("Failed to initialize notification sink")
 
     while True:
         router.tick()

@@ -12,8 +12,14 @@ if ! (pgrep tmux && tmux has-session -t $SESSION) ; then
 fi
 
 send_line() {
-    tmux send-keys -t $SESSION "$1"
+    for arg in $@ ; do
+        tmux send-keys -t $SESSION "'"$arg"'"
+        tmux send-keys -t $SESSION Space
+    done
     tmux send-keys -t $SESSION Enter
 }
 
-send_line "cd $THISDIR; .env/bin/python3 ./main.py $@"
+(cd $THISDIR && ./link_dbus.sh)
+
+send_line cd $THISDIR
+send_line .env/bin/python3 ./main.py $@
