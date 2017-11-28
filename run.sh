@@ -16,4 +16,4 @@ send_line() {
     tmux send-keys -t $SESSION Enter
 }
 
-send_line "cd $THISDIR; .env/bin/python3 ./main.py"
+send_line "cd $THISDIR; .env/bin/python3 ./main.py $@"

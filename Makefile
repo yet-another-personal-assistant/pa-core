@@ -1,7 +1,7 @@
 PYTHON_MODULES := pa2human router tg
 
 run:
-	./run.sh
+	./run.sh --name Niege
 
 niege:
 	-./main.py --name Niege
