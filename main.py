@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import argparse
 import atexit
 import fcntl
 import logging
@@ -14,12 +15,13 @@ import yaml
 from router.routing import Faucet, Router, PipeFaucet, Sink, Rule
 from router.routing.runner import Runner
 
-_LOGGER = logging.getLogger('main')
+_LOGGER = logging.getLogger(__name__)
 
 
 class TgFaucet(Faucet):
 
     def __init__(self, base_faucet):
+        super().__init__()
         self._base = base_faucet
 
     def read(self):
@@ -34,6 +36,7 @@ class TgFaucet(Faucet):
 class TgSink(Sink):
 
     def __init__(self, base_sink):
+        super().__init__()
         self._base = base_sink
         self._logger = logging.getLogger("tg_sink")
 
@@ -47,6 +50,7 @@ class TgSink(Sink):
 class StdinFaucet(Faucet):
 
     def __init__(self):
+        super().__init__()
         fl = fcntl.fcntl(0, fcntl.F_GETFL)
         fcntl.fcntl(0, fcntl.F_SETFL, fl | os.O_NONBLOCK)
         self._file = os.fdopen(0, mode='rb')
@@ -60,6 +64,7 @@ class StdinFaucet(Faucet):
 class StdoutSink(Sink):
 
     def __init__(self, name):
+        super().__init__()
         self._name = name
 
     def write(self, message):
@@ -69,8 +74,7 @@ class StdoutSink(Sink):
 class TelegramToBrainRule(Rule):
 
     def __init__(self, tg_users):
-        base = super()
-        base.__init__(target="brain", media="telegram")
+        super().__init__(target="brain", media="telegram")
         self._len += 1
         self._tg_users = {**tg_users}
 
@@ -96,11 +100,8 @@ def make_brain_factory(configs, runner):
 
 class DumpSink(Sink):
 
-    def __init__(self, logname):
-        self._logger = logging.getLogger(logname)
-
     def write(self, message):
-        self._logger.debug("Dropped %s", message)
+        _LOGGER.debug("Dropped %s", message)
 
 
 class UserConfig:
@@ -122,14 +123,15 @@ class UserConfig:
 class NotifierSink(Sink):
 
     def __init__(self, name):
+        super().__init__()
         self._name = name
 
     def write(self, message):
         notify2.Notification(self._name, message['text']).show()
 
 
-def main(owner_id, args):
-    router = Router(DumpSink("dump"))
+def build_router(owner_id, args):
+    router = Router(DumpSink())
     runner = Runner()
     runner.load("modules.yml")
 
@@ -179,13 +181,10 @@ def main(owner_id, args):
     except DBusException:
         _LOGGER.error("Failed to initialize notification sink", exc_info=True)
 
-    while True:
-        router.tick()
-        time.sleep(0.2)
+    return router
 
 
-if __name__ == '__main__':
-    import argparse
+def main():
     parser = argparse.ArgumentParser(description="Personal assistant message router")
     parser.add_argument("--name", default="pa", help="Personal Assistant name")
     parser.add_argument("--token", default="token.txt", help="Telegram token file")
@@ -204,5 +203,13 @@ if __name__ == '__main__':
             if key == 'OWNER':
                 owner_id = int(value)
     logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
-    logging.getLogger("dump").setLevel(logging.DEBUG)
-    main(owner_id, args)
+
+    router = build_router(owner_id, args)
+
+    while True:
+        router.tick()
+        time.sleep(0.2)
+
+
+if __name__ == '__main__':
+    main()
