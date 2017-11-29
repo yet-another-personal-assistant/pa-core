@@ -41,6 +41,29 @@ class TgSink(Sink):
             self._logger.warning("No chat_id set for message [%s]", message['text'])
 
 
+class StdinFaucet(Faucet):
+
+    def __init__(self):
+        import fcntl
+        fl = fcntl.fcntl(0, fcntl.F_GETFL)
+        fcntl.fcntl(0, fcntl.F_SETFL, fl | os.O_NONBLOCK)
+        self._file = os.fdopen(0, mode='rb')
+
+    def read(self):
+        line = self._file.readline()
+        if line:
+            return {"from": {"media": "local"}, "text": line.decode()}
+
+
+class StdoutSink(Sink):
+
+    def __init__(self, name):
+        self._name = name
+
+    def write(self, message):
+        print("{}: {}".format(self._name, message['text']))
+
+
 class TelegramToBrainRule(Rule):
 
     def __init__(self, tg_users):
@@ -145,6 +168,10 @@ def main(owner_id, args, friends):
     atexit.register(runner.terminate, "telegram")
     router.add_faucet(TgFaucet(runner.get_faucet("telegram")), "telegram")
     router.add_sink(TgSink(runner.get_sink("telegram")), "telegram")
+
+    router.add_faucet(StdinFaucet(), "local")
+    router.add_sink(StdoutSink(args.name), "local")
+    router.add_rule(Rule(owner_brain), "local")
 
     if not args.no_translator:
         runner.ensure_running("translator")
