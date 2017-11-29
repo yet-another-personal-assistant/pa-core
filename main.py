@@ -44,15 +44,16 @@ class TgSink(Sink):
         if 'chat_id' in message:
             self._base.write(message)
         else:
-            self._logger.warning("No chat_id set for message [%s]", message['text'])
+            self._logger.warning("No chat_id set for message [%s]",
+                                 message['text'])
 
 
 class StdinFaucet(Faucet):
 
     def __init__(self):
         super().__init__()
-        fl = fcntl.fcntl(0, fcntl.F_GETFL)
-        fcntl.fcntl(0, fcntl.F_SETFL, fl | os.O_NONBLOCK)
+        flags = fcntl.fcntl(0, fcntl.F_GETFL)
+        fcntl.fcntl(0, fcntl.F_SETFL, flags | os.O_NONBLOCK)
         self._file = os.fdopen(0, mode='rb')
 
     def read(self):
@@ -87,11 +88,12 @@ class TelegramToBrainRule(Rule):
 def make_brain_factory(configs, runner):
     def instantiate_brain(router, brain_name):
         _LOGGER.debug("Checking if we should wake up brain %s", brain_name)
-        if brain_name in configs: # it isn't started, that's why we are here
+        config = configs.get(brain_name)
+        if config:  # it isn't started, that's why we are here
             runner.ensure_running("brain",
                                   alias=brain_name,
                                   with_args=["--socket", brain_name,
-                                             "--config", configs[brain_name].filename],
+                                             "--config", config.filename],
                                   socket=os.path.join("brain", brain_name))
             router.add_sink(runner.get_sink(brain_name), brain_name)
             router.add_faucet(runner.get_faucet(brain_name), brain_name)
@@ -185,11 +187,14 @@ def build_router(owner_id, args):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Personal assistant message router")
+    parser = argparse.ArgumentParser(description="Personal assistant core")
     parser.add_argument("--name", default="pa", help="Personal Assistant name")
-    parser.add_argument("--token", default="token.txt", help="Telegram token file")
-    parser.add_argument("--incoming", default="/tmp/pa_incoming", help="Local incoming pipe")
-    parser.add_argument("--users", default="users", help="Path to user configuration files")
+    parser.add_argument("--token", default="token.txt",
+                        help="Telegram token file")
+    parser.add_argument("--incoming", default="/tmp/pa_incoming",
+                        help="Local incoming pipe")
+    parser.add_argument("--users", default="users",
+                        help="Path to user configuration files")
     parser.add_argument("--no-translator", default=False, action='store_const',
                         const=True, help="Do not start translator module")
     logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
@@ -199,7 +204,7 @@ def main():
     args = parser.parse_args()
     with open(args.token) as token_file:
         for line in token_file:
-            key, value = line.split()
+            key, value = line.split(maxsplit=1)
             if key == 'OWNER':
                 owner_id = int(value)
     logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
