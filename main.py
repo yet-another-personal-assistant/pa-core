@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
 
 import atexit
+import fcntl
 import logging
 import os
 import sys
 import time
-import yaml
 
 from dbus.exceptions import DBusException
 import notify2
+import yaml
 
-from router.routing import Faucet, Router, PipeFaucet, Sink, PipeSink, Rule, SocketFaucet, SocketSink
+from router.routing import Faucet, Router, PipeFaucet, Sink, Rule
 from router.routing.runner import Runner
+
+_LOGGER = logging.getLogger('main')
 
 
 class TgFaucet(Faucet):
@@ -44,7 +47,6 @@ class TgSink(Sink):
 class StdinFaucet(Faucet):
 
     def __init__(self):
-        import fcntl
         fl = fcntl.fcntl(0, fcntl.F_GETFL)
         fcntl.fcntl(0, fcntl.F_SETFL, fl | os.O_NONBLOCK)
         self._file = os.fdopen(0, mode='rb')
@@ -67,7 +69,7 @@ class StdoutSink(Sink):
 class TelegramToBrainRule(Rule):
 
     def __init__(self, tg_users):
-        base = super(TelegramToBrainRule, self)
+        base = super()
         base.__init__(target="brain", media="telegram")
         self._len += 1
         self._tg_users = {**tg_users}
@@ -80,13 +82,12 @@ class TelegramToBrainRule(Rule):
 
 def make_brain_factory(configs, runner):
     def instantiate_brain(router, brain_name):
-        logging.getLogger("brain factory").debug("Checking if we should wake up brain %s",
-                                                brain_name)
+        _LOGGER.debug("Checking if we should wake up brain %s", brain_name)
         if brain_name in configs: # it isn't started, that's why we are here
             runner.ensure_running("brain",
                                   alias=brain_name,
                                   with_args=["--socket", brain_name,
-                                             "--config", configs[brain_name].file],
+                                             "--config", configs[brain_name].filename],
                                   socket=os.path.join("brain", brain_name))
             router.add_sink(runner.get_sink(brain_name), brain_name)
             router.add_faucet(runner.get_faucet(brain_name), brain_name)
@@ -114,14 +115,8 @@ class UserConfig:
         return self._config.get('telegram')
 
     @property
-    def file(self):
+    def filename(self):
         return self._filename
-
-
-class MyRouter(Router):
-
-    def __init__(self):
-        super().__init__(DumpSink('dumped'))
 
 
 class NotifierSink(Sink):
@@ -133,8 +128,8 @@ class NotifierSink(Sink):
         notify2.Notification(self._name, message['text']).show()
 
 
-def main(owner_id, args, friends):
-    router = MyRouter()
+def main(owner_id, args):
+    router = Router(DumpSink("dump"))
     runner = Runner()
     runner.load("modules.yml")
 
@@ -182,7 +177,7 @@ def main(owner_id, args, friends):
         notify2.init("PA")
         router.add_sink(NotifierSink(args.name), "notify")
     except DBusException:
-        logging.getLogger('main').error("Failed to initialize notification sink")
+        _LOGGER.error("Failed to initialize notification sink", exc_info=True)
 
     while True:
         router.tick()
@@ -203,15 +198,11 @@ if __name__ == '__main__':
     logging.getLogger('asyncio').setLevel(logging.WARNING)
 
     args = parser.parse_args()
-    friends = []
-
     with open(args.token) as token_file:
         for line in token_file:
             key, value = line.split()
             if key == 'OWNER':
                 owner_id = int(value)
-            elif key == 'FRIEND':
-                friends.append(int(value))
     logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
     logging.getLogger("dump").setLevel(logging.DEBUG)
-    main(owner_id, args, friends)
+    main(owner_id, args)
