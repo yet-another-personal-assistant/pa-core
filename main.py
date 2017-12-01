@@ -2,7 +2,6 @@
 
 import argparse
 import atexit
-import fcntl
 import logging
 import os
 import sys
@@ -60,6 +59,10 @@ class UserConfig:
     def local(self):
         return self._config.get('local', False)
 
+    @property
+    def incoming(self):
+        return self._config.get('incoming')
+
 
 class NotifierSink(Sink):
 
@@ -71,9 +74,12 @@ class NotifierSink(Sink):
         notify2.Notification(self._name, message['text']).show()
 
 
-def add_local_endpoint(router, name, brain_name):
+def add_stdio_endpoint(router, name):
     router.add_faucet(StdinFaucet(), "local")
     router.add_sink(StdoutSink(name), "local")
+
+
+def bind_stdio_to_brain(router, brain_name):
     router.add_rule(Rule(brain_name), "local")
 
 
@@ -85,6 +91,16 @@ def add_incoming_faucet(router, brain_name, incoming):
     atexit.register(lambda: os.unlink(incoming))
     router.add_faucet(PipeFaucet(incoming_fd), "incoming")
     router.add_rule(Rule(brain_name), 'incoming')
+
+
+def add_tg_endpoint(router, runner, tg_users, args):
+    router.add_rule(TelegramToBrainRule(tg_users), 'telegram')
+    runner.ensure_running("telegram", with_args=["--token-file",
+                                                 os.path.abspath(args.token)])
+
+    atexit.register(runner.terminate, "telegram")
+    router.add_faucet(TgFaucet(runner.get_faucet("telegram")), "telegram")
+    router.add_sink(TgSink(runner.get_sink("telegram")), "telegram")
 
 
 def build_router(args):
@@ -102,19 +118,15 @@ def build_router(args):
         config = UserConfig(file_path)
         if config.telegram is not None:
             tg_users[config.telegram] = brain_name
-            if config.local:
-                add_local_endpoint(router, args.name, brain_name)
-                add_incoming_faucet(router, brain_name, args.incoming)
+        if config.local:
+            bind_stdio_to_brain(router, brain_name)
+        if config.incoming is not None:
+            add_incoming_faucet(router, brain_name, config.incoming)
         configs[brain_name] = config
     router.add_sink_factory(make_brain_factory(configs, runner))
-    router.add_rule(TelegramToBrainRule(tg_users), 'telegram')
 
-    runner.ensure_running("telegram", with_args=["--token-file",
-                                                 os.path.abspath(args.token)])
-
-    atexit.register(runner.terminate, "telegram")
-    router.add_faucet(TgFaucet(runner.get_faucet("telegram")), "telegram")
-    router.add_sink(TgSink(runner.get_sink("telegram")), "telegram")
+    add_tg_endpoint(router, runner, tg_users, args)
+    add_stdio_endpoint(router, args.name)
 
     if not args.no_translator:
         runner.ensure_running("translator")
@@ -133,8 +145,6 @@ def main():
     parser.add_argument("--name", default="pa", help="Personal Assistant name")
     parser.add_argument("--token", default="token.txt",
                         help="Telegram token file")
-    parser.add_argument("--incoming", default="/tmp/pa_incoming",
-                        help="Local incoming pipe")
     parser.add_argument("--users", default="users",
                         help="Path to user configuration files")
     parser.add_argument("--no-translator", default=False, action='store_const',
