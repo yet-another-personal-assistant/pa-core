@@ -12,39 +12,12 @@ from dbus.exceptions import DBusException
 import notify2
 import yaml
 
-from router.routing import Faucet, Router, PipeFaucet, Sink, Rule
+from router.routing import Router, PipeFaucet, Sink, Rule
 from router.routing.runner import Runner
+from stdio import StdinFaucet, StdoutSink
 from tg import TgFaucet, TgSink, TelegramToBrainRule
 
 _LOGGER = logging.getLogger(__name__)
-
-
-class StdinFaucet(Faucet):
-
-    def __init__(self):
-        super().__init__()
-        flags = fcntl.fcntl(0, fcntl.F_GETFL)
-        fcntl.fcntl(0, fcntl.F_SETFL, flags | os.O_NONBLOCK)
-        self._file = os.fdopen(0, mode='rb')
-
-    def read(self):
-        line = self._file.readline()
-        try:
-            line = line.decode()
-        except UnicodeDecodeError:
-            return
-        if line:
-            return {"from": {"media": "local"}, "text": line}
-
-
-class StdoutSink(Sink):
-
-    def __init__(self, name):
-        super().__init__()
-        self._name = name
-
-    def write(self, message):
-        print("{}: {}".format(self._name, message['text']))
 
 
 def make_brain_factory(configs, runner):
