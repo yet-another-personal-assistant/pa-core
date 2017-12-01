@@ -58,8 +58,12 @@ class StdinFaucet(Faucet):
 
     def read(self):
         line = self._file.readline()
+        try:
+            line = line.decode()
+        except UnicodeDecodeError:
+            return
         if line:
-            return {"from": {"media": "local"}, "text": line.decode()}
+            return {"from": {"media": "local"}, "text": line}
 
 
 class StdoutSink(Sink):
@@ -121,6 +125,10 @@ class UserConfig:
     def filename(self):
         return self._filename
 
+    @property
+    def local(self):
+        return self._config.get('local', False)
+
 
 class NotifierSink(Sink):
 
@@ -132,7 +140,23 @@ class NotifierSink(Sink):
         notify2.Notification(self._name, message['text']).show()
 
 
-def build_router(owner_id, args):
+def add_local_endpoint(router, name, brain_name):
+    router.add_faucet(StdinFaucet(), "local")
+    router.add_sink(StdoutSink(name), "local")
+    router.add_rule(Rule(brain_name), "local")
+
+
+def add_incoming_faucet(router, brain_name, incoming):
+    if os.path.exists(incoming):
+        os.unlink(incoming)
+    os.mkfifo(incoming)
+    incoming_fd = os.open(incoming, os.O_RDONLY | os.O_NONBLOCK)
+    atexit.register(lambda: os.unlink(incoming))
+    router.add_faucet(PipeFaucet(incoming_fd), "incoming")
+    router.add_rule(Rule(brain_name), 'incoming')
+
+
+def build_router(args):
     router = Router(DumpSink())
     runner = Runner()
     runner.load("modules.yml")
@@ -147,19 +171,12 @@ def build_router(owner_id, args):
         config = UserConfig(file_path)
         if config.telegram is not None:
             tg_users[config.telegram] = brain_name
-            if config.telegram == owner_id:
-                owner_brain = brain_name
+            if config.local:
+                add_local_endpoint(router, args.name, brain_name)
+                add_incoming_faucet(router, brain_name, args.incoming)
         configs[brain_name] = config
     router.add_sink_factory(make_brain_factory(configs, runner))
     router.add_rule(TelegramToBrainRule(tg_users), 'telegram')
-
-    incoming = args.incoming
-    if os.path.exists(incoming):
-        os.unlink(incoming)
-    os.mkfifo(incoming)
-    incoming_fd = os.open(incoming, os.O_RDONLY | os.O_NONBLOCK)
-    atexit.register(lambda: os.unlink(incoming))
-    router.add_faucet(PipeFaucet(incoming_fd), "incoming")
 
     runner.ensure_running("telegram", with_args=["--token-file",
                                                  os.path.abspath(args.token)])
@@ -168,14 +185,8 @@ def build_router(owner_id, args):
     router.add_faucet(TgFaucet(runner.get_faucet("telegram")), "telegram")
     router.add_sink(TgSink(runner.get_sink("telegram")), "telegram")
 
-    router.add_faucet(StdinFaucet(), "local")
-    router.add_sink(StdoutSink(args.name), "local")
-    router.add_rule(Rule(owner_brain), "local")
-
     if not args.no_translator:
         runner.ensure_running("translator")
-
-    router.add_rule(Rule(owner_brain), 'incoming')
 
     try:
         notify2.init("PA")
@@ -202,14 +213,8 @@ def main():
     logging.getLogger('asyncio').setLevel(logging.WARNING)
 
     args = parser.parse_args()
-    with open(args.token) as token_file:
-        for line in token_file:
-            key, value = line.split(maxsplit=1)
-            if key == 'OWNER':
-                owner_id = int(value)
-    logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 
-    router = build_router(owner_id, args)
+    router = build_router(args)
 
     while True:
         router.tick()
