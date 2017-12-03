@@ -95,8 +95,7 @@ def add_incoming_faucet(router, brain_name, incoming):
 
 def add_tg_endpoint(router, runner, tg_users, args):
     router.add_rule(TelegramToBrainRule(tg_users), 'telegram')
-    runner.ensure_running("telegram", with_args=["--token-file",
-                                                 os.path.abspath(args.token)])
+    runner.ensure_running("telegram", with_args=["--token", args.token])
 
     atexit.register(runner.terminate, "telegram")
     router.add_faucet(TgFaucet(runner.get_faucet("telegram")), "telegram")
@@ -125,35 +124,64 @@ def build_router(args):
         configs[brain_name] = config
     router.add_sink_factory(make_brain_factory(configs, runner))
 
-    add_tg_endpoint(router, runner, tg_users, args)
+    if args.token is not None:
+        add_tg_endpoint(router, runner, tg_users, args)
     add_stdio_endpoint(router, args.name)
 
-    if not args.no_translator:
+    if args.translator:
         runner.ensure_running("translator")
+    else:
+        _LOGGER.info("Not starting translator")
 
-    try:
-        notify2.init("PA")
-        router.add_sink(NotifierSink(args.name), "notify")
-    except DBusException:
-        _LOGGER.error("Failed to initialize notification sink", exc_info=True)
+    if args.notifications:
+        try:
+            notify2.init("PA")
+            router.add_sink(NotifierSink(args.name), "notify")
+        except DBusException:
+            _LOGGER.error("Failed to initialize notification sink", exc_info=True)
+    else:
+        _LOGGER.info("Not showing notifications")
 
     return router
 
 
+_LOG_LEVELS = {
+    'critical': logging.CRITICAL,
+    'error': logging.ERROR,
+    'warning': logging.WARNING,
+    'info': logging.INFO,
+    'debug': logging.DEBUG,
+    'notset': logging.NOTSET,
+}
+
+_LOG_LEVELS_DEFAULT = {
+    'router': 'debug',
+    'asyncio': 'warning',
+}
+
+
 def main():
     parser = argparse.ArgumentParser(description="Personal assistant core")
-    parser.add_argument("--name", default="pa", help="Personal Assistant name")
-    parser.add_argument("--token", default="token.txt",
-                        help="Telegram token file")
     parser.add_argument("--users", default="users",
                         help="Path to user configuration files")
-    parser.add_argument("--no-translator", default=False, action='store_const',
-                        const=True, help="Do not start translator module")
-    logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
-    logging.getLogger('router').setLevel(logging.DEBUG)
-    logging.getLogger('asyncio').setLevel(logging.WARNING)
+    parser.add_argument("--config", default="default.yml", help="Bot configuration file")
 
     args = parser.parse_args()
+    _LOGGER.info("Using config %s", args.config)
+    with open(args.config) as config_file:
+        config = yaml.load(config_file)
+    args.token = config.get('telegram')
+    args.name = config.get('name')
+    args.translator = config.get('translator')
+    args.notifications = config.get('notify')
+
+    debug = config.get('debug', {})
+    for module, log_level in _LOG_LEVELS_DEFAULT.items():
+        level = debug.get(module, log_level)
+        logging.getLogger(module).setLevel(_LOG_LEVELS[level])
+
+    logging.basicConfig(stream=sys.stderr,
+                        level=_LOG_LEVELS[debug.get('default', 'debug')])
 
     router = build_router(args)
 

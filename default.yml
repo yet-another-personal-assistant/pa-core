@@ -1,0 +1,4 @@
+name: pa
+translator: true # start the translator service
+telegram: # telegram token goes here. Empty to not attach to telegram
+notify: true # show notifications

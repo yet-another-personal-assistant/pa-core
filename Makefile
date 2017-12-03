@@ -1,13 +1,10 @@
 PYTHON_MODULES := pa2human router tg
 
 run:
-	./run.sh --name Niege
+	./run.sh --config niege.yml
 
-niege:
-	-./main.py --name Niege
-
-lexi:
-	-./main.py --no-translator --name Lexi
+niege lexi malena:
+	-./main.py --config $@.yml
 
 update: $(addprefix UPDATE_, $(PYTHON_MODULES)) UPDATE_core
 
