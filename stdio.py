@@ -1,6 +1,7 @@
 import fcntl
 import logging
 import os
+import sys
 
 from router.routing import Faucet, Sink
 
@@ -31,8 +32,12 @@ class StdoutSink(Sink):
     def __init__(self, name):
         super().__init__()
         self._name = name
+        print("> ", end="")
+        sys.stdout.flush()
 
     def write(self, message):
         print("{}: {}".format(self._name, message['text']))
+        print("> ", end="")
+        sys.stdout.flush()
 
 
