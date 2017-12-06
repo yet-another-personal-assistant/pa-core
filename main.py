@@ -197,9 +197,12 @@ def main():
 
     router = build_router(args)
 
-    while True:
-        router.tick()
-        time.sleep(0.2)
+    try:
+        while True:
+            router.tick()
+            time.sleep(0.2)
+    except KeyboardInterrupt:
+        pass
 
 
 if __name__ == '__main__':
