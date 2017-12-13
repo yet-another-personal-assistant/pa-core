@@ -183,7 +183,7 @@ def main():
     args.name = config.get('name')
     args.translator = config.get('translator')
     args.notifications = config.get('notify')
-    args.brains = os.path.abspath('./_brains')
+    args.brains = os.path.abspath(config.get('brains', './_brains'))
     if not os.path.exists(args.brains):
         os.mkdir(args.brains)
 
