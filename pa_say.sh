@@ -2,7 +2,7 @@
 
 message="$@"
 
-SOCKET=/tmp/pa_incoming
+SOCKET=$(dirname $0)/incoming
 exec cat >"$SOCKET" <<EOF
-{"intent": "$message", "from": {"media": "incoming", "device": "stronghold"}}
+{"intent": "$message", "from": {"media": "incoming", "device": "$(hostname)"}}
 EOF
