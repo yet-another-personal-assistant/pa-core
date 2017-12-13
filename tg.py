@@ -28,7 +28,13 @@ class TgSink(Sink):
 
     def write(self, message):
         if 'chat_id' in message:
-            self._base.write(message)
+            if isinstance(message['text'], list):
+                msg = message.copy()
+                for t in message['text']:
+                    msg['text'] = t
+                    self._base.write(msg)
+            else:
+                self._base.write(message)
         else:
             _LOGGER.warning("No chat_id set for message [%s]", message['text'])
 
