@@ -36,7 +36,11 @@ class StdoutSink(Sink):
         sys.stdout.flush()
 
     def write(self, message):
-        print("{}: {}".format(self._name, message['text']))
+        if isinstance(message['text'], list):
+            for line in message['text']:
+                print("{}: {}".format(self._name, line))
+        else:
+            print("{}: {}".format(self._name, message['text']))
         print("> ", end="")
         sys.stdout.flush()
 
