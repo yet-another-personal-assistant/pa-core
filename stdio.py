@@ -26,6 +26,9 @@ class StdinFaucet(Faucet):
         if line:
             return {"from": {"media": "local"}, "text": line}
 
+    def close(self):
+        pass
+
 
 class StdoutSink(Sink):
 
@@ -44,4 +47,5 @@ class StdoutSink(Sink):
         print("> ", end="")
         sys.stdout.flush()
 
-
+    def close(self):
+        pass

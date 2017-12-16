@@ -42,6 +42,9 @@ class DumpSink(Sink):
     def write(self, message):
         _LOGGER.debug("Dropped %s", message)
 
+    def close(self):
+        pass
+
 
 class UserConfig:
 
@@ -80,6 +83,9 @@ class NotifierSink(Sink):
 
     def write(self, message):
         notify2.Notification(self._name, message['text']).show()
+
+    def close(self):
+        pass
 
 
 def add_stdio_endpoint(router, name):

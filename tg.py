@@ -19,6 +19,9 @@ class TgFaucet(Faucet):
                 message['from']['media'] = 'telegram'
                 return message
 
+    def close(self):
+        self._base.close()
+
 
 class TgSink(Sink):
 
@@ -31,6 +34,9 @@ class TgSink(Sink):
             self._base.write(message)
         else:
             _LOGGER.warning("No chat_id set for message [%s]", message['text'])
+
+    def close(self):
+        self._base.close()
 
 
 class TelegramToBrainRule(Rule):
