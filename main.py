@@ -34,6 +34,7 @@ def make_brain_factory(configs, runner, args):
                                   socket=sock_path)
             router.add_sink(runner.get_sink(brain_name), brain_name)
             router.add_faucet(runner.get_faucet(brain_name), brain_name)
+            atexit.register(runner.terminate, brain_name)
     return instantiate_brain
 
 

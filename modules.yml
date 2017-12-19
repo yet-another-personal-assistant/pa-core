@@ -3,7 +3,7 @@ telegram:
   cwd: tg
   type: stdio
 brain:
-  command: sbcl --script run.lisp
+  command: sbcl --noinform --load run.lisp --eval '(com.aragaer.pa-brain:main)' --quit
   type: socket
   cwd: brain
 translator:
