@@ -14,7 +14,7 @@ import yaml
 from router.routing import Router, PipeFaucet, Sink, Rule
 from router.routing.runner import Runner
 from stdio import StdinFaucet, StdoutSink
-from tg import TgFaucet, TgSink, TelegramToBrainRule
+from tg import init_tg, TgFaucet, TgSink, TelegramToBrainRule
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -110,11 +110,9 @@ def add_incoming_faucet(router, brain_name, incoming):
 
 def add_tg_endpoint(router, runner, tg_users, args):
     router.add_rule(TelegramToBrainRule(tg_users), 'telegram')
-    runner.ensure_running("telegram", with_args=["--token", args.token])
-
-    atexit.register(runner.terminate, "telegram")
-    router.add_faucet(TgFaucet(runner.get_faucet("telegram")), "telegram")
-    router.add_sink(TgSink(runner.get_sink("telegram")), "telegram")
+    bot = init_tg(args.token)
+    router.add_faucet(TgFaucet(bot), "telegram")
+    router.add_sink(TgSink(bot), "telegram")
 
 
 def build_router(args):
@@ -198,6 +196,8 @@ def main():
     for module, log_level in _LOG_LEVELS_DEFAULT.items():
         level = debug.get(module, log_level)
         logging.getLogger(module).setLevel(_LOG_LEVELS[level])
+
+    logging.getLogger('urllib3').setLevel(logging.INFO)
 
     logging.basicConfig(stream=sys.stderr,
                         level=_LOG_LEVELS[debug.get('default', 'debug')])

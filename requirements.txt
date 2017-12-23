@@ -1,2 +1,3 @@
-PyYAML
 notify2
+PyYAML
+telepot

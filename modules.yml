@@ -1,7 +1,3 @@
-telegram:
-  command: .env/bin/python3 single_stdio.py
-  cwd: tg
-  type: stdio
 brain:
   command: sbcl --noinform --load run.lisp --eval '(com.aragaer.pa-brain:main)' --quit
   type: socket

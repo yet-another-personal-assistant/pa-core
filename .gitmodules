@@ -1,9 +1,6 @@
 [submodule "router"]
 	path = router
 	url = git@github.com:aragaer/pa_router.git
-[submodule "tg"]
-	path = tg
-	url = git@github.com:aragaer/telegram_pa.git
 [submodule "brain"]
 	path = brain
 	url = git@github.com:aragaer/pa_brain.git
