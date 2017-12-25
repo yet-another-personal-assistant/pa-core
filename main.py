@@ -115,12 +115,7 @@ def add_tg_endpoint(router, runner, tg_users, args):
     router.add_sink(TgSink(bot), "telegram")
 
 
-def build_router(args):
-    router = Router(DumpSink())
-    runner = Runner()
-    runner.load("modules.yml")
-
-    tg_users = {}
+def load_configs(router, args):
     configs = {}
     for num, user_file_name in enumerate(os.listdir(args.users)):
         brain_name = 'brain{}'.format(num)
@@ -129,14 +124,26 @@ def build_router(args):
         user_name = user_file_name[:-4]
         file_path = os.path.join(args.users, user_file_name)
         config = UserConfig(user_name, file_path)
-        if config.telegram is not None:
-            tg_users[config.telegram] = brain_name
         if config.local:
             bind_stdio_to_brain(router, brain_name)
         if config.incoming is not None:
             add_incoming_faucet(router, brain_name, config.incoming)
         configs[brain_name] = config
+    return configs
+
+
+def build_router(args):
+    router = Router(DumpSink())
+    runner = Runner()
+    runner.load("modules.yml")
+
+    configs = load_configs(router, args)
     router.add_sink_factory(make_brain_factory(configs, runner, args))
+
+    tg_users = {}
+    for name, config in configs.items():
+        if config.telegram is not None:
+            tg_users[config.telegram] = name
 
     if args.token is not None:
         add_tg_endpoint(router, runner, tg_users, args)
