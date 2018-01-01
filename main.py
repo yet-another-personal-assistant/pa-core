@@ -26,11 +26,14 @@ def make_brain_factory(configs, runner, args):
         if config:  # it isn't started, that's why we are here
             sock_path = os.path.join(args.brains, brain_name)
             saved_path = os.path.join(args.brains, config.user_name)
+            brain_args = ["--socket", sock_path,
+                          "--config", config.filename,
+                          "--saved", saved_path]
+            if args.translator:
+                brain_args.extend(["--translator", args.translator])
             runner.ensure_running("brain",
                                   alias=brain_name,
-                                  with_args=["--socket", sock_path,
-                                             "--config", config.filename,
-                                             "--saved", saved_path],
+                                  with_args=brain_args,
                                   socket=sock_path)
             router.add_sink(runner.get_sink(brain_name), brain_name)
             router.add_faucet(runner.get_faucet(brain_name), brain_name)
@@ -149,10 +152,16 @@ def build_router(args):
         add_tg_endpoint(router, runner, tg_users, args)
     add_stdio_endpoint(router, args.name)
 
-    if args.translator:
-        runner.ensure_running("translator")
-    else:
+    if not args.translator:
         _LOGGER.info("Not starting translator")
+    elif os.path.exists(args.translator):
+        _LOGGER.info("Translator already running")
+    else:
+        runner.ensure_running("translator",
+                              with_args=["--socket", args.translator],
+                              socket=args.translator)
+        _LOGGER.info("Translator started with socket %s", args.translator)
+        atexit.register(runner.terminate, "translator")
 
     if args.notifications:
         try:
