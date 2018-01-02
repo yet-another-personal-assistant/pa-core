@@ -1,4 +1,5 @@
 import logging
+from urllib3.exceptions import ProtocolError
 
 from telepot import Bot
 from telepot.exception import TelepotException
@@ -27,6 +28,8 @@ class TgFaucet(Faucet):
                 updates = self._bot.getUpdates(offset=self._offset, timeout=0)
             except TelepotException:
                 _LOGGER.error("Telegram error", exc_info=True)
+            except ProtocolError:
+                _LOGGER.error("Urllib error", exc_info=True)
             self._messages.extend(updates)
         if self._messages:
             message = self._messages.pop(0)
