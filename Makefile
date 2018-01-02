@@ -1,4 +1,4 @@
-PYTHON_MODULES := pa2human router tg
+PYTHON_MODULES := pa2human router
 
 run:
 	./run.sh --config niege.yml
