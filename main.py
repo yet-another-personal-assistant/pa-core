@@ -2,14 +2,19 @@
 
 import logging
 import sys
-import time
+
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def main():
+    while True:
+        print("> ", end='', flush=True)
+        s = sys.stdin.readline()
+        print("Niege> Ой, приветик!")
+
 
 if __name__ == '__main__':
     logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 
-    print("> ", end='', flush=True)
-    s = sys.stdin.readline()
-    print("Niege> Ой, приветик!")
-    print("> ", end='', flush=True)
+    main()
