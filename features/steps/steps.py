@@ -4,6 +4,8 @@ import signal
 from behave import *
 from nose.tools import eq_, ok_
 
+from utils import timeout
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -11,27 +13,21 @@ def _terminate(context, alias):
     try:
         context.runner.terminate(alias)
     except KeyError:
-        pass
-
-
-def _timeout(signum, flame):
-    raise Exception("timeout")
+        _LOGGER.debug("%s was not started", alias)
 
 
 def _expect_reply(context, text):
-    signal.signal(signal.SIGALRM, _timeout)
-    signal.alarm(1)
-    while True:
-        if context.replies.startswith(text):
-            context.replies = context.replies[len(text):]
-            return True
-        try:
-            message = context.channel.read()
-        except:
-            break
-        if message:
-            context.replies += message.decode()
-    signal.alarm(0)
+    with timeout(1):
+        while True:
+            if context.replies.startswith(text):
+                context.replies = context.replies[len(text):]
+                return True
+            try:
+                message = context.channel.read()
+            except:
+                break
+            if message:
+                context.replies += message.decode()
     _LOGGER.info("Waited for [%s], got only [%s]", text, context.replies)
     return False
 
