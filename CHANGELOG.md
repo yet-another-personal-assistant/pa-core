@@ -11,3 +11,5 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - This changelog
 - requirements.txt and requirements-dev.txt
 - main.py is the script for local access to PA
+- utils.py with utility functions
+- pa_brain submodule
