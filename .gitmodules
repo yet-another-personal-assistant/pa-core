@@ -1,3 +1,6 @@
 [submodule "brain"]
 	path = brain
 	url = https://github.com/aragaer/pa_brain.git
+[submodule "pa2human"]
+	path = pa2human
+	url = https://github.com/aragaer/pa2human.git
