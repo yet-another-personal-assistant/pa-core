@@ -40,8 +40,10 @@ def mainloop(runner):
         print("> ", end='', flush=True)
         s = sys.stdin.readline()
         channel.write(json.dumps({"message": s.strip(),
-                                "from": {"user": "user", "channel": "channel"},
-                                "to": {"user": "niege", "channel": "brain"}}).encode())
+                                  "from": {"user": "user",
+                                           "channel": "channel"},
+                                  "to": {"user": "niege",
+                                         "channel": "brain"}}).encode())
         result = _await_reply(channel).decode()
         print("Niege>", json.loads(result)['message'])
 

@@ -18,9 +18,7 @@ _COMPONENT_SCHEMA = {
     "type": "object",
     "required": ["command"],
     "properties": {
-        "command": _COMMAND_SCHEMA,
-    }
-}
+        "command": _COMMAND_SCHEMA}}
 
 _CONFIG_SCHEMA = {
     "type": "object",
@@ -28,11 +26,7 @@ _CONFIG_SCHEMA = {
     "properties": {
         "components": {
             "patternProperties": {
-                "": _COMPONENT_SCHEMA,
-            },
-        },
-    },
-}
+                "": _COMPONENT_SCHEMA}}}}
 
 
 def _config_error(ve):
