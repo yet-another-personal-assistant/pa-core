@@ -37,9 +37,8 @@ def mainloop(runner):
     channel = runner.get_channel("brain")
 
     while True:
-        print("> ", end='', flush=True)
-        s = sys.stdin.readline()
-        channel.write(json.dumps({"message": s.strip(),
+        s = input("> ")
+        channel.write(json.dumps({"message": s,
                                   "from": {"user": "user",
                                            "channel": "channel"},
                                   "to": {"user": "niege",
