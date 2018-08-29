@@ -21,7 +21,7 @@ Configuration is defined in `config.yml` file. Example of `config.yml`:
         cwd: brain
         command: sbcl --script run.lisp --translator ${translator_socket}
         buffering: line
-		after: translator
+        after: translator
 
 `variables` section is optional. It lists variables to be substituted
 in the rest of the configuration file. Currently only `tmpfile` type
