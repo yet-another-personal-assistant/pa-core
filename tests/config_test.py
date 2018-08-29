@@ -90,3 +90,13 @@ class ConfigTest(unittest.TestCase):
 
         with self.assertRaisesRegex(ConfigError, err):
             Config(cfg)
+
+    def test_variables(self):
+        config = Config("""
+            variables:
+              FILE: tmpfile
+            components:
+        """)
+
+        self.assertEqual(set(config.variables), {"FILE"})
+        self.assertEqual(config.variables["FILE"]['type'], "tmpfile")

@@ -24,6 +24,7 @@ _CONFIG_SCHEMA = {
     "type": "object",
     "required": ["components"],
     "properties": {
+        "variables": {"type": "object"},
         "components": {
             "patternProperties": {
                 "": _COMPONENT_SCHEMA}}}}
@@ -73,11 +74,19 @@ class Config:
         except ValidationError as ve:
             _config_error(ve)
 
-        if self._config['components'] is None:
-            self._config['components'] = {}
+        for toplevel in ('components', 'variables'):
+            if self._config.get(toplevel) is None:
+                self._config[toplevel] = {}
+
+        self._config['variables'] = {
+            n: {'type': t} for n, t in self._config['variables'].items()}
 
         self._components = _sort(self._config['components'])
 
     @property
     def components(self):
         return self._components
+
+    @property
+    def variables(self):
+        return self._config['variables']
