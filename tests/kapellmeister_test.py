@@ -101,3 +101,27 @@ class KapellmeisterTest(unittest.TestCase):
             while not line.endswith(b'\n'):
                 line += channel2.read()
         self.assertEqual(line, b'howdy\n')
+
+    def test_single_socat(self):
+        cfg = '''
+            variables:
+              SOCK: tmpfile
+            components:
+              socat:
+                command: socat SYSTEM:cat UNIX-LISTEN:${SOCK}
+                type: socket
+                socket: ${SOCK}
+        '''
+        km = Kapellmeister(Config(cfg))
+        with timeout(1):
+            km.run()
+
+        channel = km.connect("socat")
+
+        channel.write(b'howdy\n')
+
+        with timeout(1):
+            line = b''
+            while not line.endswith(b'\n'):
+                line += channel.read()
+        self.assertEqual(line, b'howdy\n')

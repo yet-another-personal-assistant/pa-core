@@ -31,9 +31,10 @@ class Kapellmeister:
             val['value'] = os.path.join(self._dir, var)
 
         for component, definition in self._config.components.items():
-            command = _VAR_RE.sub(self._repl_var, definition['command'])
-            _LOGGER.debug("'%s' -> '%s'", definition['command'], command)
-            definition['command'] = command
+            for field, value in definition.items():
+                new_value = _VAR_RE.sub(self._repl_var, value)
+                _LOGGER.debug("'%s' -> '%s'", value, new_value)
+                definition[field] = new_value
 
         self._runner.update_config(self._config.components)
         for component in self._config.components:

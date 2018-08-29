@@ -9,10 +9,7 @@ import shutil
 import signal
 import sys
 
-from tempfile import mkdtemp
-
-from runner import Runner
-
+from core import Config, Kapellmeister
 from utils import timeout
 
 
@@ -27,14 +24,13 @@ def _await_reply(channel):
     return result
 
 
-def stop_all(runner):
-    runner.get_channel("brain").close()
-    runner.terminate("brain")
-    runner.terminate("translator")
+# FIXME
+def stop_all(km):
+    _LOGGER.warn("stop all")
 
 
-def mainloop(runner):
-    channel = runner.get_channel("brain")
+def mainloop(km):
+    channel = km.connect("brain")
 
     while True:
         s = input("> ")
@@ -52,25 +48,13 @@ def _term(*_):
 
 
 def main():
-    tmpdir = mkdtemp()
-    atexit.register(shutil.rmtree, tmpdir)
-    translator_socket = os.path.join(tmpdir, "tr")
-
-    runner = Runner()
-    runner.add("brain", "sbcl --script run.lisp",
-               cwd="brain", buffering="line", setpgrp=True)
-    runner.add("translator", "./pa2human.py",
-               cwd="pa2human", type="socket")
-
-    atexit.register(lambda: stop_all(runner))
-    runner.start("translator",
-                 with_args=["--socket", translator_socket],
-                 socket=translator_socket)
-    runner.start("brain",
-                 with_args=["--translator", translator_socket])
+    with open("config.yml") as cfg:
+        config = Config(cfg.read())
+    km = Kapellmeister(config)
+    km.run()
 
     try:
-        mainloop(runner)
+        mainloop(km)
     except KeyboardInterrupt:
         _LOGGER.info("Exiting on keyboard interrupt")
 

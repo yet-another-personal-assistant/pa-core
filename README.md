@@ -5,6 +5,38 @@ Main repository for simple virtual personal assistant.
 `main.py` allows direct access to PA using CLI. Commands are forwarded
 to the `pa-brain` component which is started separately.
 
+## Configuration
+
+Configuration is defined in `config.yml` file. Example of `config.yml`:
+
+    variables:
+      translator_socket: tmpfile
+    components:
+      translator:
+        cwd: pa2human
+        command: ./pa2human.py --socket ${translator_socket}
+        type: socket
+        socket: ${translator_socket}
+      brain:
+        cwd: brain
+        command: sbcl --script run.lisp --translator ${translator_socket}
+        buffering: line
+		after: translator
+
+`variables` section is optional. It lists variables to be substituted
+in the rest of the configuration file. Currently only `tmpfile` type
+is supported which is a unique filename.
+
+`components` section describes components to be started. Component
+definition uses the following fields:
+
+- `command` _Mandatory_: The command to start the component.
+- `cwd`: Working directory for the component. Default is the current directory.
+- `type`: How to communicate to the component. Currently supported are `socket` (UNIX socket) and `stdio`. Default is `stdio`.
+- `buffering`: If defined and set to `line`, line buffering is used for communication.
+- `socket`: Mandatory for `socket` type components. Name of the socket file that is expected to be created by the component.
+- `after`: Defines ordering for components.
+
 ## Requirements
 
 ### Brain
