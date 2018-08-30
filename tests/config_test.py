@@ -91,16 +91,6 @@ class ConfigTest(unittest.TestCase):
         with self.assertRaisesRegex(ConfigError, err):
             Config(cfg)
 
-    def test_variables(self):
-        config = Config("""
-            variables:
-              FILE: tmpfile
-            components:
-        """)
-
-        self.assertEqual(set(config.variables), {"FILE"})
-        self.assertEqual(config.variables["FILE"]['type'], "tmpfile")
-
     def test_two_dependencies(self):
         config = Config("""
             components:
@@ -117,3 +107,13 @@ class ConfigTest(unittest.TestCase):
         self.assertIn(list(config.components),
                       [["component1", "component2", "component3"],
                        ["component2", "component1", "component3"]])
+
+    def test_variables(self):
+        config = Config("""
+            variables:
+              FILE: tmpfile
+            components:
+        """)
+
+        self.assertEqual(set(config.variables), {"FILE"})
+        self.assertEqual(config.variables["FILE"]['type'], "tmpfile")

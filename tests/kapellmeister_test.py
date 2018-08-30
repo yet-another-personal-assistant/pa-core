@@ -125,3 +125,15 @@ class KapellmeisterTest(unittest.TestCase):
             while not line.endswith(b'\n'):
                 line += channel.read()
         self.assertEqual(line, b'howdy\n')
+
+    def test_undef_variables(self):
+        config = Config("""
+            components:
+              component:
+                command: touch ${file}
+        """)
+
+        km = Kapellmeister(config)
+
+        with self.assertRaises(KeyError):
+            km.run()
