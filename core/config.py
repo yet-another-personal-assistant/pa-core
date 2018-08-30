@@ -54,7 +54,11 @@ def _sort(components):
     for component, definition in components.items():
         graph.add_node(component)
         if 'after' in definition:
-            graph.add_edge(definition['after'], component)
+            if isinstance(definition['after'], list):
+                for dep in definition['after']:
+                    graph.add_edge(dep, component)
+            else:
+                graph.add_edge(definition['after'], component)
     with suppress(StopIteration):
         cycle = next(networkx.simple_cycles(graph))
         raise ConfigError("Dependency loop: " + ' -> '.join(cycle))

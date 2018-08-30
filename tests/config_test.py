@@ -100,3 +100,20 @@ class ConfigTest(unittest.TestCase):
 
         self.assertEqual(set(config.variables), {"FILE"})
         self.assertEqual(config.variables["FILE"]['type'], "tmpfile")
+
+    def test_two_dependencies(self):
+        config = Config("""
+            components:
+              component1:
+                command: command1
+              component2:
+                command: command2
+              component3:
+                command: command3
+                after:
+                  - component1
+                  - component2
+        """)
+        self.assertIn(list(config.components),
+                      [["component1", "component2", "component3"],
+                       ["component2", "component1", "component3"]])

@@ -35,7 +35,7 @@ definition uses the following fields:
 - `type`: How to communicate to the component. Currently supported are `socket` (UNIX socket) and `stdio`. Default is `stdio`.
 - `buffering`: If defined and set to `line`, line buffering is used for communication.
 - `socket`: Mandatory for `socket` type components. Name of the socket file that is expected to be created by the component.
-- `after`: Defines ordering for components.
+- `after`: Defines ordering for components. Can be either single component or a list of components.
 
 ## Requirements
 
