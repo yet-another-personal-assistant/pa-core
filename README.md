@@ -39,11 +39,17 @@ definition uses the following fields:
 
 ## Requirements
 
+### Translator
+`pa2human` component. Currently defined in config.yml as a Python
+script started with `./pa2human.py` command in `pa2human` 
+directory. Currently retrieved as a git submodule from [pa2human
+repository](https://github.com/aragaer/pa2human). Not used directly.
+
 ### Brain
-- `pa-brain` component must be located in the brain
-  directory. Currently hardcoded as a Common Lisp application started
-  with `sbcl --script run.lisp` command. Currently retrieved as a git
-  submodule from [pa_brain repository](https://github.com/aragaer/pa_brain).
+`pa-brain` component. Currently defined in config.yml as a Common Lisp
+application started with `sbcl --script run.lisp` command in `brain`
+directory. Currently retrieved as a git submodule from [pa_brain
+repository](https://github.com/aragaer/pa_brain).
 
 ## Protocol
 

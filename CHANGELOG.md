@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 - Kapellmeister is now used in main.py instead of Runner
+- translator socket is now sent to brain process
 
 ## 0.1.0 - 2018-08-19
 ### Added
