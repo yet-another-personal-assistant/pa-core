@@ -1,19 +1,19 @@
-import logging
+import re
 import signal
+import socket
 
 from behave import *
 from nose.tools import eq_, ok_
+from runner.channel import SocketChannel
 
 from utils import timeout
-
-_LOGGER = logging.getLogger(__name__)
 
 
 def _terminate(context, alias):
     try:
         context.runner.terminate(alias)
     except KeyError:
-        _LOGGER.debug("%s was not started", alias)
+        print("{} was not started".format(alias))
 
 
 def _expect_reply(context, text):
@@ -28,7 +28,7 @@ def _expect_reply(context, text):
                 break
             if message:
                 context.replies += message.decode()
-    _LOGGER.info("Waited for [%s], got only [%s]", text, context.replies)
+    print("Waited for [{}], got only [{}]".format(text, context.replies))
     return False
 
 
@@ -66,3 +66,36 @@ def step_impl(context):
 @then(u'I see "{text}"')
 def step_impl(context, text):
     ok_(_expect_reply(context, text+"\n"))
+
+
+@given(u'the service is started')
+def step_impl(context):
+    context.add_cleanup(_terminate, context, "server")
+    context.runner.start("server")
+    stdio = context.runner.get_channel("server")
+    with timeout(5):
+        while True:
+            line = stdio.read()
+            if line:
+                break
+    match = re.match(r'^Server started on ([0-9\.]+):([0-9]+)$',
+                     line.decode())
+    ok_(match)
+    context.host = match.group(1)
+    context.port = int(match.group(2))
+
+
+@given('I connected to the service')
+def step_impl(context):
+    context.execute_steps('''
+        When I connect to the service
+        Then I see the input prompt
+    ''')
+
+
+@when(u'I connect to the service')
+def step_impl(context):
+    print("Connecting to", context.host, context.port)
+    sock = socket.create_connection((context.host, context.port))
+    context.channel = SocketChannel(sock)
+    context.replies = ""

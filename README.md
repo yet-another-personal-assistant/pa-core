@@ -5,6 +5,9 @@ Main repository for simple virtual personal assistant.
 `main.py` allows direct access to PA using CLI. Commands are forwarded
 to the `pa-brain` component which is started separately.
 
+`server.py` allows remote access to PA. It accepts TCP connections and
+forwards commands to `pa-brain`.
+
 ## Configuration
 
 Configuration is defined in `config.yml` file. Example of `config.yml`:
