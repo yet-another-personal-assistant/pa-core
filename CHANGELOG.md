@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - server.py is the script for remote access to PA
 
+### Changed
+- main.py is rewritten using Twisted
+
 ## [0.2.0] - 2018-08-31
 ### Added
 - Configuration parser

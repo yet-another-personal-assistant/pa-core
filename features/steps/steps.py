@@ -16,8 +16,8 @@ def _terminate(context, alias):
         print("{} was not started".format(alias))
 
 
-def _expect_reply(context, text):
-    with timeout(1):
+def _expect_reply(context, text, seconds=1):
+    with timeout(seconds):
         while True:
             if context.replies.startswith(text):
                 context.replies = context.replies[len(text):]
@@ -49,8 +49,8 @@ def step_impl(context):
 def step_impl(context):
     context.execute_steps('''
         When I start the main script
-        Then I see the input prompt
     ''')
+    ok_(_expect_reply(context, "> ", 5))
 
 
 @when(u'I type "{text}"')
