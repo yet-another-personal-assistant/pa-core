@@ -55,7 +55,7 @@ class TestChatProtocol(TestCase):
     def test_message_sent_to_brain(self):
         self.channel.to_read.append(b'{"message": ""}')
         self.sp.dataReceived(b'Hello\n')
-        line = self.channel.to_write[0]
+        line = self.channel.to_write[0].decode()
 
         self.assertEquals(json.loads(line),
                           {"message": "Hello",
