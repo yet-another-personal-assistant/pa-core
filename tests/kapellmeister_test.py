@@ -155,3 +155,15 @@ class KapellmeisterTest(unittest.TestCase):
 
         with self.assertRaises(EndpointClosedException):
             chan.read()
+
+    def test_terminate_twice(self):
+        config = Config("""
+            components:
+              cat:
+                command: cat
+        """)
+        km = Kapellmeister(config)
+        km.run()
+
+        km.terminate()
+        km.terminate()

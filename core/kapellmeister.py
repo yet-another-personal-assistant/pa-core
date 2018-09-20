@@ -19,6 +19,7 @@ class Kapellmeister:
         self._config = config
         self._runner = Runner()
         self._dir = None
+        self._started = False
 
     def _repl_var(self, matchobj):
         return self._config.variables[matchobj.group(1)]['value']
@@ -44,6 +45,9 @@ class Kapellmeister:
         for component in self._config.components:
             self._runner.ensure_running(component)
 
+        self._started = True
+        atexit.register(self.terminate)
+
     def connect(self, component):
         return self._runner.get_channel(component)
 
@@ -51,5 +55,8 @@ class Kapellmeister:
         return self._config.variables[variable_name]['value']
 
     def terminate(self):
+        if not self._started:
+            return
         for component in self._config.components:
             self._runner.terminate(component)
+        self._started = False
