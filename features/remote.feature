@@ -6,12 +6,11 @@ Feature: Remote access
   Background: Service is started
      Given the service is started
 
-  Scenario: Local prompt
+  Scenario: Remote prompt
     When I connect to the service
     Then I see the input prompt
     
-  @wip
-  Scenario: Local hello
+  Scenario: Remote hello
     Given I connected to the service
      When I type "Привет"
       And press enter

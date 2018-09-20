@@ -49,3 +49,7 @@ class Kapellmeister:
 
     def get_variable(self, variable_name):
         return self._config.variables[variable_name]['value']
+
+    def terminate(self):
+        for component in self._config.components:
+            self._runner.terminate(component)

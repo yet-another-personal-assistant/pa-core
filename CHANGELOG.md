@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## Unreleased
 ### Added
 - server.py is the script for remote access to PA
+- terminate in Kapellmeister
 
 ### Changed
 - main.py is rewritten using Twisted

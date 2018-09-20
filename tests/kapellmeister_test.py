@@ -5,6 +5,8 @@ import unittest
 
 from tempfile import mkdtemp
 
+from runner.channel import EndpointClosedException
+
 from core import Config, Kapellmeister
 from utils import timeout
 
@@ -137,3 +139,19 @@ class KapellmeisterTest(unittest.TestCase):
 
         with self.assertRaises(KeyError):
             km.run()
+
+    def test_terminate(self):
+        config = Config("""
+            components:
+              cat:
+                command: cat
+        """)
+
+        km = Kapellmeister(config)
+        km.run()
+        chan = km.connect("cat")
+
+        km.terminate()
+
+        with self.assertRaises(EndpointClosedException):
+            chan.read()
