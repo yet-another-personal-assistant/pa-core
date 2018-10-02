@@ -24,9 +24,6 @@ class ChatProtocol(LineReceiver):
     def __init__(self, channel):
         self._channel = channel
 
-    def connectionMade(self):
-        self.transport.setTcpNoDelay(True)
-    
     def lineReceived(self, line):
         self._channel.write(json.dumps({"message": line.decode(),
                                         "from": {"user": "user",
