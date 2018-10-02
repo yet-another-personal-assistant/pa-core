@@ -49,8 +49,7 @@ class TestChatProtocol(TestCase):
         self.sp.factory = MockFactory()
 
     def test_prompt(self):
-        self.assertEquals(self.transport.value(),
-                          b'> ')
+        self.assertEquals(self.transport.value(), b'')
 
     def test_message_sent_to_brain(self):
         self.channel.to_read.append(b'{"message": ""}')
@@ -72,7 +71,7 @@ class TestChatProtocol(TestCase):
         self.sp.dataReceived(b'Hello\n')
 
         self.assertEquals(self.transport.value(),
-                          b'> ' + b'Niege> Hi\n' + b'> ')
+                          b'Niege> Hi\n')
 
     def test_wait_for_brain_answer(self):
         brain_reply = json.dumps({"message": "Hi",
@@ -85,7 +84,7 @@ class TestChatProtocol(TestCase):
         self.sp.dataReceived(b'Hello\n')
 
         self.assertEquals(self.transport.value(),
-                          b'> ' + b'Niege> Hi\n' + b'> ')
+                          b'Niege> Hi\n')
 
 
 class ChatProtocolFactoryTest(unittest.TestCase):

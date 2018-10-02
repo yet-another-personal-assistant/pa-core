@@ -1,9 +1,13 @@
 import json
+import logging
 
 from twisted.internet.protocol import Factory
 from twisted.protocols.basic import LineReceiver
 
 from utils import timeout
+
+
+_LOGGER = logging.getLogger(__name__)
 
 
 def _await_reply(channel):
@@ -15,18 +19,11 @@ def _await_reply(channel):
 
 
 class ChatProtocol(LineReceiver):
+    delimiter = b'\n'
+
     def __init__(self, channel):
         self._channel = channel
 
-    def _sendPrompt(self):
-        self.delimiter = b' '
-        self.sendLine(b'>')
-        self.delimiter = b'\n'
-
-    def connectionMade(self):
-        self._sendPrompt()
-
-    
     def lineReceived(self, line):
         self._channel.write(json.dumps({"message": line.decode(),
                                         "from": {"user": "user",
@@ -36,7 +33,6 @@ class ChatProtocol(LineReceiver):
         
         result = _await_reply(self._channel).decode()
         self.sendLine(b'Niege> '+json.loads(result)['message'].encode())
-        self._sendPrompt()
 
 
 class ChatProtocolFactory(Factory):

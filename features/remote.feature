@@ -4,15 +4,11 @@ Feature: Remote access
   So that I could use it from a different computer
   
   Background: Service is started
-     Given the service is started
+    Given the service is started
 
-  Scenario: Remote prompt
-    When I connect to the service
-    Then I see the input prompt
-    
+  @slow
   Scenario: Remote hello
     Given I connected to the service
      When I type "Привет"
       And press enter
      Then I see "Niege> Ой, приветик!"
-      And I see the input prompt

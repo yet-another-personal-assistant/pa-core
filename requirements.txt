@@ -2,5 +2,5 @@ jsonschema
 networkx
 PyYAML
 Twisted
-yet-another-runner==0.3.0
+yet-another-runner==0.3.1
 
