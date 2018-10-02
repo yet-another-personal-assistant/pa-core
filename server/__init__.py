@@ -35,12 +35,7 @@ class ChatProtocol(LineReceiver):
                                                "channel": "brain"}}).encode())
         
         result = _await_reply(self._channel).decode()
-        _LOGGER.debug("Sending")
-        self.transport.write(b'Niege> ')
-        self.transport.write(json.loads(result)['message'].encode())
-        self.transport.write(b'\n')
-        #self.sendLine(b'Niege> '+json.loads(result)['message'].encode())
-        _LOGGER.debug("Sent")
+        self.sendLine(b'Niege> '+json.loads(result)['message'].encode())
 
 
 class ChatProtocolFactory(Factory):

@@ -26,7 +26,7 @@ def _expect_reply(context, text, seconds=None):
             seconds = 1
 
     while True:
-        results = context.poll.poll(seconds * 1000)
+        results = context.p.poll(seconds * 1000)
         if not results:
             print("Waited for [{}], got only [{}]".format(text, context.replies))
             return False
@@ -50,8 +50,8 @@ def step_impl(context):
     context.runner.start("main")
     context.channel = context.runner.get_channel("main")
     context.replies = ""
-    context.poll.register(context.channel.get_fd())
-    print("Register fd", context.channel.get_fd()) 
+    context.p.register(context.channel.get_fd(), select.POLLIN)
+    print("Register fd", context.channel.get_fd())
     time.sleep(2)
 
 
@@ -75,11 +75,14 @@ def step_impl(context):
     context.add_cleanup(_terminate, context, "server")
     context.runner.start("server")
     stdio = context.runner.get_channel("server")
-    with timeout(5):
-        while True:
-            line = stdio.read()
-            if line:
-                break
+    context.p.register(stdio.get_fd(), select.POLLIN)
+    result = context.p.poll(5000)
+    eq_(len(result), 1)
+    fd, evt = result[0]
+    eq_(fd, stdio.get_fd())
+    eq_(evt, select.POLLIN)
+    context.p.unregister(fd)
+    line = stdio.read()
     match = re.match(r'^Server started on ([0-9\.]+):([0-9]+)$',
                      line.decode())
     ok_(match)
@@ -94,3 +97,4 @@ def step_impl(context):
     sock = socket.create_connection((context.host, context.port))
     context.channel = SocketChannel(sock)
     context.replies = ""
+    context.p.register(sock.fileno(), select.POLLIN)

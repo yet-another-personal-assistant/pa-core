@@ -10,4 +10,4 @@ def before_all(context):
                        buffering="line")
 
 def before_scenario(context, _):
-    context.poll = select.poll()
+    context.p = select.poll()
