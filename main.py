@@ -38,12 +38,13 @@ def main(config_file):
         for data, channel in poller.poll():
             name = channel_names[channel]
             if name == 'stdio':
-                line = data.decode()
-                channels['brain'].write(json.dumps({"message": line.strip(),
-                                                    "from": {"user": "user",
-                                                             "channel": "channel"},
-                                                    "to": {"user": "niege",
-                                                           "channel": "brain"}}).encode())
+                line = data.decode().strip()
+                if line:
+                    channels['brain'].write(json.dumps({"message": line,
+                                                        "from": {"user": "user",
+                                                                 "channel": "channel"},
+                                                        "to": {"user": "niege",
+                                                               "channel": "brain"}}).encode())
             elif name == 'brain':
                 _LOGGER.info("XXX %s XXX", data)
                 msg = json.loads(data)
