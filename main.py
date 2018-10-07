@@ -47,7 +47,7 @@ def main(config_file):
                                                                "channel": "brain"}}).encode())
             elif name == 'brain':
                 _LOGGER.info("XXX %s XXX", data)
-                msg = json.loads(data)
+                msg = json.loads(data.decode())
                 _LOGGER.info("MMM %s", msg)
                 channels['stdio'].write(b"Niege> ", msg['message'].encode(), b'\n')
             else:
