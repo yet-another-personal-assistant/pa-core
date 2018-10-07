@@ -1,6 +1,12 @@
 import select
+import shutil
+
+from tempfile import mkdtemp
 
 from runner import Runner
+
+from core.poller import Poller
+
 
 def before_all(context):
     context.runner = Runner()
@@ -11,3 +17,9 @@ def before_all(context):
 
 def before_scenario(context, _):
     context.p = select.poll()
+    context.poller = Poller()
+    context.dir = mkdtemp()
+    context.add_cleanup(shutil.rmtree, context.dir)
+    context.fixed_replies = {}
+    context.reply_delays = {}
+    context.users = {}

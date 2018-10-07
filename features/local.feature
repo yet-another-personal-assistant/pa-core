@@ -9,3 +9,23 @@ Feature: Local access
      When I type "Привет"
       And press enter
      Then I see "Niege> Ой, приветик!"
+
+  @fake
+  Scenario: Local echo brain
+    Given that brain should reply
+     | phrase | response | delay |
+     | hello  | hi       |   0.5 |
+    Given I started the main script
+     When I type "hello"
+      And press enter
+     Then I see "Niege> hi"
+
+  @fake
+  Scenario: Local silent
+    Given that brain should reply
+     | phrase | response |
+     | hello  | None     |
+    Given I started the main script
+     When I type "hello"
+      And press enter
+     Then I see nothing
