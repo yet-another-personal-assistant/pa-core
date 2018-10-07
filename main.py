@@ -7,7 +7,10 @@ import select
 import signal
 import sys
 
+from runner.channel import PipeChannel
+
 from core import Config, Kapellmeister
+from core.poller import Poller
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -21,38 +24,34 @@ def main():
         config = Config(cfg.read())
     km = Kapellmeister(config)
     km.run()
-    channel = km.connect("brain")
 
-    poll = select.poll()
-    fds = {
-        sys.stdin.fileno(): "stdin",
-        channel.get_fd(): "chan",
+    poller = Poller()
+    channels = {
+        "stdio": PipeChannel(sys.stdin.fileno(), sys.stdout.fileno()),
+        "brain": km.connect("brain"),
     }
-    for fd in fds:
-        poll.register(fd, select.POLLIN | select.POLLERR | select.POLLHUP)
-        _LOGGER.debug("Registered fd %d", fd)
+    channel_names = dict((v,k) for k,v in channels.items())
+    for chan in channels.values():
+        poller.register(chan)
 
     while True:
-        for fd, event in poll.poll():
-            _LOGGER.debug("Event %d on fd %d", event, fd)
-            name = fds[fd]
-            if name == 'stdin':
-                if event & select.POLLIN:
-                    line = sys.stdin.readline()
-                    channel.write(json.dumps({"message": line.strip(),
-                                              "from": {"user": "user",
-                                                       "channel": "channel"},
-                                              "to": {"user": "niege",
-                                                     "channel": "brain"}}).encode())
-                if event & (select.POLLERR | select.POLLHUP):
-                    return
-            elif name == 'chan':
-                line = channel.read()
-                _LOGGER.info("XXX %s XXX", line)
-                msg = json.loads(line)
+        for data, channel in poller.poll():
+            name = channel_names[channel]
+            if name == 'stdio':
+                line = data.decode()
+                channels['brain'].write(json.dumps({"message": line.strip(),
+                                                    "from": {"user": "user",
+                                                             "channel": "channel"},
+                                                    "to": {"user": "niege",
+                                                           "channel": "brain"}}).encode())
+            elif name == 'brain':
+                _LOGGER.info("XXX %s XXX", data)
+                msg = json.loads(data)
                 _LOGGER.info("MMM %s", msg)
-                print("Niege>", msg['message'])
-                sys.stdout.flush()
+                channels['stdio'].write(b"Niege> ", msg['message'].encode(), b'\n')
+            else:
+                _LOGGER.error("Unknown channel %s", channel)
+                exit(-1)
 
 
 if __name__ == '__main__':
