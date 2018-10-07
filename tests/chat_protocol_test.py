@@ -1,5 +1,6 @@
 import json
 import signal
+import time
 import unittest
 
 from twisted.internet.protocol import Factory
@@ -85,6 +86,14 @@ class TestChatProtocol(TestCase):
 
         self.assertEquals(self.transport.value(),
                           b'Niege> Hi\n')
+
+    def test_no_answer(self):
+        self.channel.read = lambda self: time.sleep(3)
+
+        self.sp.dataReceived(b'Hello\n')
+
+        self.assertEquals(self.transport.value(),
+                          b'')
 
 
 class ChatProtocolFactoryTest(unittest.TestCase):
