@@ -29,19 +29,27 @@ def _terminate(context, alias):
         print("{} was not started".format(alias))
 
 
+def _build_brain_response(text, f=None, t=None):
+    if f is None:
+        f = "from"
+    if t is None:
+        t = "to"
+    return json.dumps({'message': text,
+                       'from': f,
+                       'to': t}).encode() + b'\n'
+
+
 def _send_delayed(channel, data, delay):
     time.sleep(delay)
     channel.write(data)
 
 
 def _fake_brain_response(context, line):
-    msg = json.loads(line)
+    msg = json.loads(line.decode())
     text = msg['message']
     reply = context.fixed_replies.get(text, text)
     if reply is not None:
-        message = json.dumps({'message': reply,
-                              'from': msg['to'],
-                              'to': msg['from']}).encode()+b'\n'
+        message = _build_brain_response(reply, msg['to'], msg['from'])
         delay = context.reply_delays.get(text, 0)
         if delay:
             th = threading.Thread(target=_send_delayed,
@@ -199,6 +207,7 @@ def step_impl(context):
 
 @given('that brain should reply')
 def step_impl(context):
+    ok_('fake' in context.tags)
     for row in context.table.rows:
         phrase, response = row[0], row[1]
         delay = float(row[2]) if len(row) > 2 else 0
@@ -206,3 +215,9 @@ def step_impl(context):
             response = None
         context.fixed_replies[phrase] = response
         context.reply_delays[phrase] = delay
+
+
+@when('brain says "{message}"')
+def step_impl(context, message):
+    ok_('fake' in context.tags)
+    context.brain.write(_build_brain_response(message))
