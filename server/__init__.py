@@ -31,8 +31,11 @@ class ChatProtocol(LineReceiver):
                                         "to": {"user": "niege",
                                                "channel": "brain"}}).encode())
         
-        result = _await_reply(self._channel).decode()
-        self.sendLine(b'Niege> '+json.loads(result)['message'].encode())
+        try:
+            result = _await_reply(self._channel).decode()
+            self.sendLine(b'Niege> '+json.loads(result)['message'].encode())
+        except Exception:
+            pass
 
 
 class ChatProtocolFactory(Factory):
