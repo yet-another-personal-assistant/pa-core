@@ -45,3 +45,9 @@ class Poller:
             channel.close()
         for server in self._servers.values():
             server.close()
+
+    def unregister(self, channel):
+        fd = channel.get_fd()
+        self._poll.unregister(fd)
+        del self._channels[fd]
+        _LOGGER.debug("Un registered channel %s with fd %d", channel, fd)

@@ -88,3 +88,14 @@ class PollerTest(unittest.TestCase):
         with timeout(1):
             with self.assertRaises(OSError):
                 serv.accept()
+
+    def test_unregister(self):
+        chan = TestChannel()
+        self._poller.register(chan)
+        chan.put(b'hello\n')
+
+        self._poller.unregister(chan)
+
+        with self.assertRaisesRegex(Exception, "timeout"):
+            with timeout(0.2):
+                self._poller.poll()
