@@ -5,5 +5,7 @@ python:
   - "3.6"
 
 install: "pip install -r requirements-travis.txt"
-script: "nosetests --with-coverage"
+script:
+  - nosetests --with-coverage
+  - behave --tags @fake
 after_success: codecov
