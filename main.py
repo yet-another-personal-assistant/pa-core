@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
+import argparse
 import atexit
 import json
 import logging
-import readline
 import select
 import signal
 import sys
@@ -19,8 +19,8 @@ def _term(*_):
     exit()
 
 
-def main():
-    with open("config.yml") as cfg:
+def main(config_file):
+    with open(config_file) as cfg:
         config = Config(cfg.read())
     km = Kapellmeister(config)
     km.run()
@@ -57,7 +57,11 @@ def main():
 if __name__ == '__main__':
     signal.signal(signal.SIGTERM, _term)
     logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
-    readline.set_auto_history(True)
+
+    parser = argparse.ArgumentParser(description="Local interface",
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("--config", default="config.yml")
+    args = parser.parse_args()
 
     atexit.register(_LOGGER.info, "Exiting")
-    main()
+    main(args.config)
