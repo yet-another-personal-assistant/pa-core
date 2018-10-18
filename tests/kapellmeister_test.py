@@ -5,7 +5,7 @@ import unittest
 
 from tempfile import mkdtemp
 
-from runner.channel import EndpointClosedException
+from channels.channel import EndpointClosedException
 
 from core import Config, Kapellmeister
 from utils import timeout
