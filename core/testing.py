@@ -1,8 +1,11 @@
 import json
+import logging
 import socket
 
 from channels.poller import Poller
 
+
+_LOGGER = logging.getLogger(__name__)
 
 class FakeBrain:
 
@@ -19,7 +22,7 @@ class FakeBrain:
 
     def work(self, duration):
         for data, channel in self._poller.poll(duration):
-            print("Got", data, "from", channel)
+            _LOGGER.debug("Got %s from %s", data, channel)
             if channel == self._serv:
                 _, self._client = data
             else:

@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
+import argparse
 import atexit
+import getpass
 import json
 import logging
 import readline
 import select
 import signal
+import socket
 import sys
 
 from core import Config, Kapellmeister
@@ -16,8 +19,8 @@ def _term(*_):
     exit()
 
 
-def main():
-    with open("config.yml") as cfg:
+def main(config_file_name):
+    with open(config_file_name) as cfg:
         config = Config(cfg.read())
     km = Kapellmeister(config)
     km.run()
@@ -31,6 +34,12 @@ def main():
     for fd in fds:
         poll.register(fd, select.POLLIN | select.POLLERR | select.POLLHUP)
         _LOGGER.debug("Registered fd %d", fd)
+
+    presence_msg = {'event': 'presence',
+                    'from': {'user': getpass.getuser(),
+                             'channel': 'local:'+socket.gethostname()},
+                    'to': 'brain'}
+    channel.write(json.dumps(presence_msg).encode()+b'\n')
 
     while True:
         for fd, event in poll.poll():
@@ -60,5 +69,10 @@ if __name__ == '__main__':
     logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
     readline.set_auto_history(True)
 
+    parser = argparse.ArgumentParser(description="pa-local",
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("--config", default="config.yml")
+    args = parser.parse_args()
+
     atexit.register(_LOGGER.info, "Exiting")
-    main()
+    main(args.config)

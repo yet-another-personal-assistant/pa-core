@@ -1,3 +1,5 @@
+import getpass
+import os
 import re
 import select
 import socket
@@ -47,12 +49,19 @@ def _expect_reply(context, text, seconds=None):
 @when(u'I start the main script')
 def step_impl(context):
     context.add_cleanup(_terminate, context, "main")
-    context.runner.start("main")
+    if 'fake' in context.tags:
+        context.runner.start("main", with_args=['--config',
+                                                os.path.join(context.dir,
+                                                             "config.yml")])
+    else:
+        context.runner.start("main")
     context.channel = context.runner.get_channel("main")
     context.replies = ""
     context.p.register(context.channel.get_fd(), select.POLLIN)
     print("Register fd", context.channel.get_fd())
     time.sleep(2)
+    if 'fake' in context.tags:
+        context.b.work(1)
 
 
 @when(u'I type "{text}"')
@@ -63,6 +72,8 @@ def step_impl(context, text):
 @when(u'press enter')
 def step_impl(context):
     context.channel.write(b'\n')
+    if 'fake' in context.tags:
+        context.b.work(1)
 
 
 @then(u'I see "{text}"')
@@ -98,3 +109,18 @@ def step_impl(context):
     context.channel = SocketChannel(sock)
     context.replies = ""
     context.p.register(sock.fileno(), select.POLLIN)
+
+
+@then('brain sees new local channel')
+def step_impl(context):
+    context.b.work(1)
+    msg = context.b.messages.pop(0)
+    eq_(msg, {'event': 'presence',
+              'from': {'user': getpass.getuser(),
+                       'channel': 'local:'+socket.gethostname()},
+              'to': 'brain'})
+
+
+@when('brain sends "{message}" message to me')
+def step_impl(context, message):
+    context.b.send_message_to(message, '', '')
