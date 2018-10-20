@@ -12,6 +12,7 @@ class FakeBrain:
         self._serv.listen()
         self.addr = self._serv.getsockname()
         self.users = {}
+        self.messages = []
         self._poller = Poller()
         self._poller.add_server(self._serv)
         self._client = None
@@ -23,14 +24,11 @@ class FakeBrain:
                 _, self._client = data
             else:
                 msg = json.loads(data.decode().strip())
+                self.messages.append(msg)
                 if 'message' in msg:
                     channel.write(json.dumps({"message": msg['message'],
                                               "from": msg['to'],
                                               "to": msg['from']}).encode()+b'\n')
-                elif 'event' in msg:
-                    user = msg['from']['user']
-                    u_channel = msg['from']['channel']
-                    self.users[user] = [u_channel]
 
     def send_message_to(self, message, user, channel):
         self._client.write(json.dumps({"message": message,

@@ -38,17 +38,17 @@ class FakeBrainTest(unittest.TestCase):
         self._fb.shutdown()
 
     def _send_presence(self, user, channel):
-        self._sock.send(json.dumps({'event': 'presence',
-                                    'from': {'user': 'user',
-                                             'channel': 'channel'}}).encode()+b'\n')
+        msg = {'event': 'presence',
+               'from': {'user': 'user',
+                        'channel': 'channel'}}
+        self._sock.send(json.dumps(msg).encode()+b'\n')
         self._fb.work(1)
+        return msg
 
     def test_presence_message(self):
-        self._send_presence('user', 'channel')
+        msg = self._send_presence('user', 'channel')
 
-        self.assertEqual(len(self._fb.users), 1)
-        self.assertIn('user', self._fb.users)
-        self.assertEqual(self._fb.users['user'], ['channel'])
+        self.assertEqual(self._fb.messages, [msg])
 
     def test_send_message_to(self):
         self._send_presence('user', 'channel')
@@ -65,11 +65,14 @@ class FakeBrainTest(unittest.TestCase):
                                       "channel": 'channel'}})
 
     def test_echo(self):
-        self._sock.send(json.dumps({"message": "test",
-                                    "from": {"user": "user",
-                                             "channel": 'channel'},
-                                    "to": "brain"}).encode()+b'\n')
+        msg = {"message": "test",
+               "from": {"user": "user",
+                        "channel": 'channel'},
+               "to": "brain"}
+        self._sock.send(json.dumps(msg).encode()+b'\n')
         self._fb.work(1)
+
+        self.assertEquals(self._fb.messages, [msg])
 
         with timeout(0.2):
             data = self._sock.recv(1024)
