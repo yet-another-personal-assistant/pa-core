@@ -14,7 +14,6 @@ class FakeBrain:
         self._serv.bind(('127.0.0.1', 0))
         self._serv.listen()
         self.addr = self._serv.getsockname()
-        self.users = {}
         self.messages = []
         self._poller = Poller()
         self._poller.add_server(self._serv)
