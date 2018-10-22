@@ -42,6 +42,8 @@ def _expect_reply(context, text, seconds=None):
                     context.replies += data.decode()
                 if context.replies.startswith(text):
                     context.replies = context.replies[len(text):]
+                    if context.replies.startswith('\n'):
+                        context.replies = context.replies[1:]
                     return True
 
 
@@ -78,7 +80,7 @@ def step_impl(context):
 
 @then(u'I see "{text}"')
 def step_impl(context, text):
-    ok_(_expect_reply(context, text+"\n"))
+    ok_(_expect_reply(context, text))
 
 
 @given(u'the service is started')
