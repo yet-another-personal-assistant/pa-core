@@ -3,7 +3,6 @@ Feature: Local access
   I want to be able to greet my personal assistant using local console
   So that I could use it without any network
 
-  @skip
   @slow
   Scenario: Local hello
     Given I started the main script

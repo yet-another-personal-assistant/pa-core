@@ -49,6 +49,8 @@ class FakeBrainTest(unittest.TestCase):
         msg = self._send_presence('user', 'channel')
 
         self.assertEqual(self._fb.messages, [msg])
+        with self.assertRaises(Exception), timeout(0.2):
+            self._sock.recv(1024)
 
     def test_send_message_to(self):
         self._send_presence('user', 'channel')

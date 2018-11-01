@@ -33,6 +33,7 @@ class FakeBrain:
                                               "to": msg['from']}).encode()+b'\n')
 
     def send_message_to(self, message, user, channel):
+        _LOGGER.debug("Writing message '%s' to user %s channel %s", message, user, channel)
         self._client.write(json.dumps({"message": message,
                                        "from": "brain",
                                        "to": {'user': user,

@@ -1,6 +1,8 @@
+import logging
 import os
 import select
 import shutil
+import sys
 
 from tempfile import mkdtemp
 
@@ -11,6 +13,7 @@ from core.testing import FakeBrain
 
 
 def before_all(context):
+    logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
     context.runner = Runner()
     context.runner.add("main", "./main.py", buffering="line")
     context.runner.add("server",
@@ -27,3 +30,4 @@ def before_scenario(context, _):
             cfg.write("""components:\n  brain:
     command: socat STDIO TCP:{}:{}
     buffering: line""".format(*context.b.addr))
+    context.channels = {}

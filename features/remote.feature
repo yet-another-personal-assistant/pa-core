@@ -12,3 +12,24 @@ Feature: Remote access
      When I type "Привет"
       And press enter
      Then I see "Niege> Ой, приветик!"
+
+  @fake
+  Scenario: Presence message
+     When I connect to the service
+     Then I see "Please enter your name> "
+     When I type "user1"
+      And press enter
+     Then brain sees new remote channel for user1
+
+  @fake
+  Scenario: Hello message
+    Given user1 connected to the service
+     When user1 types "hello"
+      And presses enter
+     Then user1 sees "Niege> hello"
+
+  @fake
+  Scenario: Presence message
+    Given user1 connected to the service
+     When brain sends "go to bed" message to user1
+     Then user1 sees "Niege> go to bed"

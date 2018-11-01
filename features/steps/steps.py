@@ -7,7 +7,7 @@ import time
 
 from behave import *
 from nose.tools import eq_, ok_
-from runner.channel import SocketChannel
+from channels.channel import SocketChannel
 
 from utils import timeout
 
@@ -66,11 +66,13 @@ def step_impl(context):
         context.b.work(1)
 
 
+@when(u'user1 types "{text}"')
 @when(u'I type "{text}"')
 def step_impl(context, text):
     context.channel.write(text.encode())
 
 
+@when(u'presses enter')
 @when(u'press enter')
 def step_impl(context):
     context.channel.write(b'\n')
@@ -78,6 +80,7 @@ def step_impl(context):
         context.b.work(1)
 
 
+@then(u'user1 sees "{text}"')
 @then(u'I see "{text}"')
 def step_impl(context, text):
     ok_(_expect_reply(context, text))
@@ -86,7 +89,12 @@ def step_impl(context, text):
 @given(u'the service is started')
 def step_impl(context):
     context.add_cleanup(_terminate, context, "server")
-    context.runner.start("server")
+    if 'fake' in context.tags:
+        context.runner.start("server", with_args=['--config',
+                                                  os.path.join(context.dir,
+                                                               "config.yml")])
+    else:
+        context.runner.start("server")
     stdio = context.runner.get_channel("server")
     context.p.register(stdio.get_fd(), select.POLLIN)
     result = context.p.poll(5000)
@@ -101,9 +109,19 @@ def step_impl(context):
     ok_(match)
     context.host = match.group(1)
     context.port = int(match.group(2))
+    if 'fake' in context.tags:
+        context.b.work(1)
 
 
 @given('I connected to the service')
+def step_impl(context):
+    context.execute_steps('''
+     When I connect to the service
+     Then I see "Please enter your name> "
+     When I type "aragaer"
+      And press enter
+    ''')
+
 @when(u'I connect to the service')
 def step_impl(context):
     print("Connecting to", context.host, context.port)
@@ -126,3 +144,33 @@ def step_impl(context):
 @when('brain sends "{message}" message to me')
 def step_impl(context, message):
     context.b.send_message_to(message, '', '')
+
+
+@when('brain sends "{message}" message to {user}')
+def step_impl(context, message, user):
+    context.b.send_message_to(message, user,
+                              context.channels[user])
+
+
+@then('brain sees new remote channel for {user}')
+def step_impl(context, user):
+    context.b.work(1)
+    msg = context.b.messages.pop(0)
+    channel_name = msg['from']['channel']
+    del msg['from']['channel']
+    eq_(msg, {'event': 'presence',
+              'from': {'user': user},
+              'to': 'brain'})
+    eq_(channel_name[:4], "tcp:")
+    context.channels[user] = channel_name
+
+
+@given('{user} connected to the service')
+def step_impl(context, user):
+    context.execute_steps("""
+     When I connect to the service
+     Then I see "Please enter your name> "
+     When I type "{user}"
+      And press enter
+     Then brain sees new remote channel for {user}
+""".format(user=user))
