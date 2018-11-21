@@ -84,3 +84,14 @@ class FakeBrainTest(unittest.TestCase):
                                "from": "brain",
                                "to": {"user": "user",
                                       "channel": 'channel'}})
+
+    def test_fake_brain_is_line_buffered(self):
+        msg = {"message": "test",
+               "from": {"user": "user",
+                        "channel": 'channel'},
+               "to": "brain"}
+        self._sock.send(json.dumps(msg).encode()+b'\n')
+        self._sock.send(json.dumps(msg).encode()+b'\n')
+        self._fb.work(1)
+
+        self.assertEquals(self._fb.messages, [msg, msg])

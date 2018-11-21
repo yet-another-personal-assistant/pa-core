@@ -15,7 +15,7 @@ class FakeBrain:
         self._serv.listen()
         self.addr = self._serv.getsockname()
         self.messages = []
-        self._poller = Poller()
+        self._poller = Poller(buffering='line')
         self._poller.add_server(self._serv)
         self._client = None
 

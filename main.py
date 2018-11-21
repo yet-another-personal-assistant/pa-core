@@ -52,7 +52,8 @@ def main(config_file_name):
                                               "from": {"user": "user",
                                                        "channel": "channel"},
                                               "to": {"user": "niege",
-                                                     "channel": "brain"}}).encode())
+                                                     "channel": "brain"}}).encode(),
+                                  b'\n')
                 if event & (select.POLLERR | select.POLLHUP):
                     return
             elif name == 'chan':

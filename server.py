@@ -48,7 +48,7 @@ def main(addr, port, config_file_name):
                 _LOGGER.debug("Message from brain: %s", msg)
                 channel_name = msg['to']['channel']
                 chan = name2chan[channel_name]
-                chan.write(b'Niege> '+msg['message'].encode()+b'\n')
+                chan.write(b'Niege> '+msg['message'].encode(), b'\n')
             else:
                 _LOGGER.debug("Got data: %s", repr(data))
                 line = data.decode().strip()
@@ -58,7 +58,7 @@ def main(addr, port, config_file_name):
                                     'from': {'user': line,
                                              'channel':chan2name[channel]},
                                     'to': 'brain'}
-                    brain.write(json.dumps(presence_msg).encode()+b'\n')
+                    brain.write(json.dumps(presence_msg).encode(), b'\n')
                     usernames[channel] = line
                 else:
                     _LOGGER.debug("Sending message from channel %s", channel)
@@ -66,7 +66,8 @@ def main(addr, port, config_file_name):
                                             "from": {"user": usernames[channel],
                                                      "channel": chan2name[channel]},
                                             "to": {"user": "niege",
-                                                   "channel": "brain"}}).encode())
+                                                   "channel": "brain"}}).encode(),
+                                b'\n')
 
 
 if __name__ == '__main__':
