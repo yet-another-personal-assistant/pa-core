@@ -54,6 +54,8 @@ def main(addr, port, config_file_name):
                 line = data.decode().strip()
                 if channel not in usernames:
                     _LOGGER.debug("Sending user name \"%s\" for channel %s", line, channel)
+                    brain.write(json.dumps({"command": "switch-user",
+                                            "user": line}).encode(), b'\n')
                     presence_msg = {'event': 'presence',
                                     'from': {'user': line,
                                              'channel':chan2name[channel]},

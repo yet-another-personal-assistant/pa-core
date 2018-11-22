@@ -66,6 +66,14 @@ def step_impl(context):
         context.b.work(1)
 
 
+@then('the active user is {user}')
+def step_impl(context, user):
+    context.b.work(1)
+    msg = context.b.messages.pop(0)
+    eq_(msg['command'], 'switch-user')
+    eq_(msg['user'], user)
+
+
 @when(u'user1 types "{text}"')
 @when(u'I type "{text}"')
 def step_impl(context, text):
@@ -133,10 +141,12 @@ def step_impl(context):
 
 @then('brain sees new local channel')
 def step_impl(context):
+    user = getpass.getuser()
+    context.execute_steps('Then the active user is {}'.format(user))
     context.b.work(1)
     msg = context.b.messages.pop(0)
     eq_(msg, {'event': 'presence',
-              'from': {'user': getpass.getuser(),
+              'from': {'user': user,
                        'channel': 'local:'+socket.gethostname()},
               'to': 'brain'})
 
@@ -154,6 +164,7 @@ def step_impl(context, message, user):
 
 @then('brain sees new remote channel for {user}')
 def step_impl(context, user):
+    context.execute_steps('Then the active user is {}'.format(user))
     context.b.work(1)
     msg = context.b.messages.pop(0)
     channel_name = msg['from']['channel']

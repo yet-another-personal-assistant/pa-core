@@ -35,11 +35,15 @@ def main(config_file_name):
         poll.register(fd, select.POLLIN | select.POLLERR | select.POLLHUP)
         _LOGGER.debug("Registered fd %d", fd)
 
+    user = getpass.getuser()
+    channel.write(json.dumps({"command": "switch-user",
+                              "user": user}).encode(), b'\n')
+
     presence_msg = {'event': 'presence',
-                    'from': {'user': getpass.getuser(),
+                    'from': {'user': user,
                              'channel': 'local:'+socket.gethostname()},
                     'to': 'brain'}
-    channel.write(json.dumps(presence_msg).encode()+b'\n')
+    channel.write(json.dumps(presence_msg).encode(), b'\n')
 
     while True:
         for fd, event in poll.poll():
@@ -49,7 +53,7 @@ def main(config_file_name):
                 if event & select.POLLIN:
                     line = sys.stdin.readline()
                     channel.write(json.dumps({"message": line.strip(),
-                                              "from": {"user": "user",
+                                              "from": {"user": user,
                                                        "channel": "channel"},
                                               "to": {"user": "niege",
                                                      "channel": "brain"}}).encode(),

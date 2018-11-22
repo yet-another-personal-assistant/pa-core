@@ -18,6 +18,7 @@ class FakeBrain:
         self._poller = Poller(buffering='line')
         self._poller.add_server(self._serv)
         self._client = None
+        self._active_user = None
 
     def work(self, duration):
         for data, channel in self._poller.poll(duration):
@@ -27,10 +28,13 @@ class FakeBrain:
             else:
                 msg = json.loads(data.decode().strip())
                 self.messages.append(msg)
-                if 'message' in msg:
+                if 'message' in msg and msg['from']['user'] == self._active_user:
                     channel.write(json.dumps({"message": msg['message'],
                                               "from": msg['to'],
                                               "to": msg['from']}).encode()+b'\n')
+                elif 'command' in msg:
+                    if msg['command'] == 'switch-user':
+                        self._active_user = msg['user']
 
     def send_message_to(self, message, user, channel):
         _LOGGER.debug("Writing message '%s' to user %s channel %s", message, user, channel)
