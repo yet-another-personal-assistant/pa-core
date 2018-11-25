@@ -65,7 +65,8 @@ class FakeBrainTest(unittest.TestCase):
         self.assertTrue(data.endswith(b'\n'))
         msg = json.loads(data.decode().strip())
         self.assertEqual(msg, {"message": "test",
-                               "from": "brain",
+                               "from": {"user": "niege",
+                                        "channel": "brain"},
                                "to": {"user": "user",
                                       "channel": 'channel'}})
 

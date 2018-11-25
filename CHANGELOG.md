@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 - FakeBrain is now line-buffered as it should be
+- FakeBrain now sends messages with correct "from" field
 
 ## [0.3.0] - 2018-11-05
 ### Added
