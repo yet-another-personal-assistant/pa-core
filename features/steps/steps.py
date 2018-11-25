@@ -1,4 +1,5 @@
 import getpass
+import json
 import os
 import re
 import select
@@ -61,9 +62,11 @@ def step_impl(context):
     context.replies = ""
     context.p.register(context.channel.get_fd(), select.POLLIN)
     print("Register fd", context.channel.get_fd())
-    time.sleep(2)
     if 'fake' in context.tags:
         context.b.work(1)
+    else:
+        # Give real brain some time to start
+        time.sleep(2)
 
 
 @then('the active user is {user}')
@@ -185,3 +188,67 @@ def step_impl(context, user):
       And press enter
      Then brain sees new remote channel for {user}
 """.format(user=user))
+
+
+@given(u'a socket is created')
+def step_impl(context):
+    context.router_sock = socket.socket(socket.AF_UNIX)
+    context.router_sock.bind(os.path.join(context.dir, "ROUTER"))
+    context.router_sock.listen()
+
+
+@given(u'the local application is connected')
+def step_impl(context):
+    context.execute_steps('''
+        When the local application connects to it
+        Then it sends the correct channel name
+    ''')
+
+
+@when(u'the local application connects to it')
+def step_impl(context):
+    context.runner.start("local", with_args=['--socket',
+                                             os.path.join(context.dir,
+                                                          "ROUTER")])
+    context.add_cleanup(_terminate, context, "local")
+    context.channel = context.runner.get_channel("local")
+    context.replies = ""
+    context.p.register(context.channel.get_fd(), select.POLLIN)
+    print("Register fd", context.channel.get_fd())
+
+    with timeout(0.2):
+        context.endpoint_sock, _ = context.router_sock.accept()
+
+
+@then(u'it sends the correct channel name')
+def step_impl(context):
+    expected = 'local:'+socket.gethostname()
+    line = context.endpoint_sock.recv(1024)
+    eq_(line.decode().strip(), expected)
+
+
+@then(u'the socket receives the "{message}" message')
+def step_impl(context, message):
+    channel = 'local:'+socket.gethostname()
+    user = getpass.getuser()
+    line = context.endpoint_sock.recv(1024)
+    line.endswith(b'\n')
+    msg = json.loads(line.decode().strip())
+    eq_(msg, {'message': message,
+              'from': {'user': user,
+                       'channel': channel},
+              'to': {'user': 'niege',
+                     'channel': 'brain'}})
+
+
+@when(u'"{message}" message is sent to socket')
+def step_impl(context, message):
+    channel = 'local:'+socket.gethostname()
+    user = getpass.getuser()
+    msg = {'message': message,
+           'to': {'user': user,
+                  'channel': channel},
+           'from': {'user': 'niege',
+                    'channel': 'brain'}}
+    context.endpoint_sock.send(json.dumps(msg).encode())
+    context.endpoint_sock.send(b'\n')
