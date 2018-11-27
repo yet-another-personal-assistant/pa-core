@@ -63,7 +63,8 @@ def step_impl(context):
     context.p.register(context.channel.get_fd(), select.POLLIN)
     print("Register fd", context.channel.get_fd())
     if 'fake' in context.tags:
-        context.b.work(1)
+        while context.b._client is None:
+            context.b.work(1)
     else:
         # Give real brain some time to start
         time.sleep(2)
@@ -151,12 +152,14 @@ def step_impl(context):
     eq_(msg, {'event': 'presence',
               'from': {'user': user,
                        'channel': 'local:'+socket.gethostname()},
-              'to': 'brain'})
+              'to': {"user": "niege",
+                     "channel": "brain"}})
 
 
 @when('brain sends "{message}" message to me')
 def step_impl(context, message):
-    context.b.send_message_to(message, '', '')
+    context.b.send_message_to(message, getpass.getuser(),
+                              'local:'+socket.gethostname())
 
 
 @when('brain sends "{message}" message to {user}')
@@ -222,9 +225,10 @@ def step_impl(context):
 
 @then(u'it sends the correct channel name')
 def step_impl(context):
-    expected = 'local:'+socket.gethostname()
-    line = context.endpoint_sock.recv(1024)
-    eq_(line.decode().strip(), expected)
+    expected = 'local'
+    data = context.endpoint_sock.recv(1024).decode()
+    lines = data.strip().split('\n')
+    eq_(lines[0], expected)
 
 
 @then(u'the socket receives the "{message}" message')
