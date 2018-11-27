@@ -44,6 +44,7 @@ def send_name():
 
 
 def poll(timeout=None):
+    _LOGGER.debug("Polling")
     for data, channel in _POLLER.poll(timeout):
         if channel == _STDIO:
             if not data:
@@ -73,10 +74,15 @@ def main(sockname):
                           sys.stdout.fileno(),
                           buffering='line'))
     send_name()
+    _ROUTER.write(json.dumps({"event": "presence",
+                              "from": {"user": _USER,
+                                       "channel": _CHANNEL},
+                              "to": {"user": "niege",
+                                     "channel": "brain"}}).encode(), b'\n')
 
     try:
         while True:
-            poll()
+            poll(1)
     except KeyboardInterrupt:
         return
 
