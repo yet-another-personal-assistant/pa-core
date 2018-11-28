@@ -19,7 +19,10 @@ class LocalEndpointTest(unittest.TestCase):
         self.user = getpass.getuser()
 
     def tearDown(self):
-        local.set_stdio(None)
+        try:
+            local.set_stdio(None)
+        except ValueError:
+            pass
         try:
             local.set_router(None)
         except ValueError:
@@ -69,6 +72,12 @@ class LocalEndpointTest(unittest.TestCase):
 
     def test_router_disconnected(self):
         self.router.close()
+
+        with self.assertRaises(SystemExit):
+            local.poll(0.01)
+
+    def test_stdio_closed(self):
+        self.stdio.close()
 
         with self.assertRaises(SystemExit):
             local.poll(0.01)
