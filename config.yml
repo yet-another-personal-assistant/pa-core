@@ -4,8 +4,7 @@ components:
   translator:
     cwd: pa2human
     command: ./pa2human.py --socket ${translator_socket}
-    type: socket
-    socket: ${translator_socket}
+    wait-for: ${translator_socket}
   brain:
     cwd: brain
     command: sbcl --script run.lisp --translator ${translator_socket}

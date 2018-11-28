@@ -2,15 +2,29 @@
 
 Main repository for simple virtual personal assistant.
 
-`main.py` allows direct access to PA using CLI. Commands are forwarded
-to the `pa-brain` component which is started separately.
+`router.py` is the central component for routing messages between user
+channels and brains.
 
-`server.py` allows remote access to PA. It accepts TCP connections and
-forwards commands to `pa-brain`.
+`tcp.py` is an endpoint that connects to a running router and listens
+for incoming TCP connections.
+
+`local.py` is an endpoint that connects to a running router and allows
+access to PA using CLI.
+
+`incoming.py` is an endpoint that creates a named pipe that accepts
+system events and forwards them to router.
+
+`app.py` is a main script for starting the application. It starts the
+router and two endpoints -- tcp and incoming.
+
+`main.py` and `server.py` are deprecated scripts. `main.py` is
+essentially a `router.py`+`local.py` and `server.py` is
+`router.py`+`tcp.py`
 
 ## Configuration
 
-Configuration is defined in `config.yml` file. Example of `config.yml`:
+Currently two separate configuration files are used: `config.yml` and
+`config_new.yml`. Example of `config.yml`:
 
     variables:
       translator_socket: tmpfile
@@ -18,13 +32,29 @@ Configuration is defined in `config.yml` file. Example of `config.yml`:
       translator:
         cwd: pa2human
         command: ./pa2human.py --socket ${translator_socket}
-        type: socket
-        socket: ${translator_socket}
+        wait-for: ${translator_socket}
       brain:
         cwd: brain
         command: sbcl --script run.lisp --translator ${translator_socket}
         buffering: line
         after: translator
+
+Example of `config_new.yml`:
+
+     components:
+       router:
+         cwd: .
+         command: ./router.py --socket router_socket
+         wait-for: router_socket
+       tcp:
+         cwd: .
+         command: ./tcp.py --socket router_socket
+         after: router
+       incoming:
+         cwd: .
+         command: ./incoming.py --socket router_socket
+         after: router
+
 
 `variables` section is optional. It lists variables to be substituted
 in the rest of the configuration file. Currently only `tmpfile` type

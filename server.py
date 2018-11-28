@@ -4,7 +4,6 @@ import atexit
 import logging
 import os
 import signal
-import socket
 import sys
 
 from tempfile import gettempdir
@@ -32,7 +31,7 @@ def main(host, port, config):
                           with_args=["--socket", sockname,
                                      "--config", config])
 
-    tcp.main(sockname, host, port, config)
+    tcp.main(sockname, host, port)
 
 
 if __name__ == '__main__':

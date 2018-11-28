@@ -9,9 +9,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - local.py script
 - 'wait-for' parameter in Kapellmeister configs
 - 'timeout' parameter for Kapellmeister.run()
+- TcpEndpoint
+- IncomingEndpoint
+- app.py script to start PA
 
 ### Changed
 - Using brain 0.4.0 now
+
+### Deprecated
+- main.py - use router.py+local.py
+- server.py - use router.py+tcp.py
 
 ### Fixed
 - FakeBrain is now line-buffered as it should be

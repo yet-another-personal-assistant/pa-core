@@ -1,0 +1,13 @@
+components:
+  router:
+    cwd: .
+    command: ./router.py --socket router_socket
+    wait-for: router_socket
+  tcp:
+    cwd: .
+    command: ./tcp.py --socket router_socket
+    after: router
+  incoming:
+    cwd: .
+    command: ./incoming.py --socket router_socket
+    after: router
