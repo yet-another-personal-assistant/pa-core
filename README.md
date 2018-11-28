@@ -39,12 +39,13 @@ definition uses the following fields:
 - `buffering`: If defined and set to `line`, line buffering is used for communication.
 - `socket`: Mandatory for `socket` type components. Name of the socket file that is expected to be created by the component.
 - `after`: Defines ordering for components. Can be either single component or a list of components.
+- `wait-for`: Should be a name of a file created by the command.
 
 ## Requirements
 
 ### Translator
 `pa2human` component. Currently defined in config.yml as a Python
-script started with `./pa2human.py` command in `pa2human` 
+script started with `./pa2human.py` command in `pa2human`
 directory. Currently retrieved as a git submodule from [pa2human
 repository](https://github.com/aragaer/pa2human). Not used directly.
 

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Added
 - local.py script
+- 'wait-for' parameter in Kapellmeister configs
+- 'timeout' parameter for Kapellmeister.run()
 
 ### Changed
 - Using brain 0.4.0 now

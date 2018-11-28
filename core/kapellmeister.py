@@ -3,6 +3,8 @@ import logging
 import re
 import os
 import shutil
+import signal
+import time
 
 from tempfile import mkdtemp
 
@@ -11,6 +13,10 @@ from runner import Runner
 _LOGGER = logging.getLogger(__name__)
 
 _VAR_RE = re.compile(r'\${(\w+)}')
+
+
+class TimeoutException(Exception):
+    pass
 
 
 class Kapellmeister:
@@ -37,16 +43,33 @@ class Kapellmeister:
                 _LOGGER.debug("'%s' -> '%s'", value, new_value)
                 definition[field] = new_value
 
-    def run(self):
+    def _wait_for(self, filename, end_time):
+        while not os.path.exists(filename):
+            if end_time is not None and time.monotonic() > end_time:
+                raise TimeoutException()
+            time.sleep(0.01)
+
+    def run(self, timeout=None):
         self._prepare_temp_files()
         self._substitute_variables()
 
         self._runner.update_config(self._config.components)
-        for component in self._config.components:
+        atexit.register(self.terminate)
+
+        if timeout is None:
+            end_time = None
+        else:
+            end_time = time.monotonic() + timeout
+
+        for component, cfg in self._config.components.items():
             self._runner.ensure_running(component)
+            if 'wait-for' in cfg:
+                print("start", component, time.monotonic())
+                print("end_time", component, end_time)
+                self._wait_for(cfg['wait-for'], end_time)
+                print("real end", component, time.monotonic())
 
         self._started = True
-        atexit.register(self.terminate)
 
     def connect(self, component):
         return self._runner.get_channel(component)

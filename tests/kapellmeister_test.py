@@ -7,11 +7,15 @@ from tempfile import mkdtemp
 
 from channels.channel import EndpointClosedException
 
-from core import Config, Kapellmeister
+from core import Config, Kapellmeister, TimeoutException
 from utils import timeout
 
 
 class KapellmeisterTest(unittest.TestCase):
+
+    def tearDown(self):
+        if os.path.exists("file"):
+            os.unlink("file")
 
     def test_no_components(self):
         km = Kapellmeister(Config("components:\n"))
@@ -43,6 +47,7 @@ class KapellmeisterTest(unittest.TestCase):
             components:
               socat1:
                 command: socat STDIO UNIX-LISTEN:{sock}
+                wait-for: {sock}
               socat2:
                 command: socat UNIX:{sock} STDIO
                 after: socat1
@@ -167,3 +172,38 @@ class KapellmeisterTest(unittest.TestCase):
 
         km.terminate()
         km.terminate()
+
+    def test_wait_for(self):
+        config = Config("""
+            components:
+              slow-write:
+                command: sh -c "sleep 0.1; echo hello > file"
+                wait-for: file
+              cat:
+                command: cat file
+                after: slow-write
+        """)
+        km = Kapellmeister(config)
+        if os.path.exists("file"):
+            os.unlink("file")
+        km.run(0.2)
+
+        chan = km.connect("cat")
+        self.assertEqual(chan.read(), b"hello\n")
+
+    def test_wait_limit(self):
+        config = Config("""
+            components:
+              slow-write:
+                command: sh -c "sleep 10; echo hello > file"
+                wait-for: file
+              cat:
+                command: cat file
+                after: slow-write
+        """)
+        km = Kapellmeister(config)
+        if os.path.exists("file"):
+            os.unlink("file")
+
+        with self.assertRaises(TimeoutException):
+            km.run(0.1)
