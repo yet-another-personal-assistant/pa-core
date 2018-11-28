@@ -195,7 +195,7 @@ class KapellmeisterTest(unittest.TestCase):
         config = Config("""
             components:
               slow-write:
-                command: sh -c "sleep 10; echo hello > file"
+                command: sh -c "sleep 1; echo hello > file"
                 wait-for: file
               cat:
                 command: cat file
@@ -207,3 +207,5 @@ class KapellmeisterTest(unittest.TestCase):
 
         with self.assertRaises(TimeoutException):
             km.run(0.1)
+
+        km.terminate()

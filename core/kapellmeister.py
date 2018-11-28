@@ -25,7 +25,7 @@ class Kapellmeister:
         self._config = config
         self._runner = Runner()
         self._dir = None
-        self._started = False
+        self._started = []
 
     def _repl_var(self, matchobj):
         return self._config.variables[matchobj.group(1)]['value']
@@ -63,13 +63,12 @@ class Kapellmeister:
 
         for component, cfg in self._config.components.items():
             self._runner.ensure_running(component)
+            self._started.append(component)
             if 'wait-for' in cfg:
                 print("start", component, time.monotonic())
                 print("end_time", component, end_time)
                 self._wait_for(cfg['wait-for'], end_time)
                 print("real end", component, time.monotonic())
-
-        self._started = True
 
     def connect(self, component):
         return self._runner.get_channel(component)
@@ -78,8 +77,6 @@ class Kapellmeister:
         return self._config.variables[variable_name]['value']
 
     def terminate(self):
-        if not self._started:
-            return
-        for component in self._config.components:
+        for component in self._started:
             self._runner.terminate(component)
-        self._started = False
+        self._started = []
