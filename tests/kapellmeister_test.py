@@ -91,6 +91,7 @@ class KapellmeisterTest(unittest.TestCase):
             components:
               socat1:
                 command: socat STDIO UNIX-LISTEN:${SOCK}
+                wait-for: ${SOCK}
               socat2:
                 command: socat STDIO UNIX:${SOCK}
                 after: socat1
