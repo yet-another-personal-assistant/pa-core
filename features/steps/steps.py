@@ -177,7 +177,8 @@ def step_impl(context, user):
     del msg['from']['channel']
     eq_(msg, {'event': 'presence',
               'from': {'user': user},
-              'to': 'brain'})
+              'to': {"user": "niege",
+                     "channel": "brain"}})
     eq_(channel_name[:4], "tcp:")
     context.channels[user] = channel_name
 

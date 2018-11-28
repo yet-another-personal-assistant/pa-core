@@ -8,6 +8,14 @@ from channels.poller import Poller
 _LOGGER = logging.getLogger(__name__)
 
 
+class BrainDisconnectedException(Exception):
+    pass
+
+
+class RouterDisconnectedException(Exception):
+    pass
+
+
 class Router:
 
     def __init__(self, serv, be):
@@ -74,6 +82,8 @@ class Router:
             if channel == self._serv:
                 continue
             elif channel == self._be:
+                if not data:
+                    raise BrainDisconnectedException()
                 msg = json.loads(data.decode())
                 endpoint = self._get_endpoint(msg['to']['channel'])
                 if endpoint is not None:

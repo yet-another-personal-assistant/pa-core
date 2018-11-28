@@ -1,78 +1,43 @@
 #!/usr/bin/env python3
 import argparse
-import json
+import atexit
 import logging
+import os
+import signal
 import socket
 import sys
 
-from channels.poller import Poller
+from tempfile import gettempdir
 
-from core import Config, Kapellmeister
+from runner import Runner
+
+import tcp
 
 _LOGGER = logging.getLogger(__name__)
 
 
-def main(addr, port, config_file_name):
-    with open(config_file_name) as cfg:
-        config = Config(cfg.read())
-    km = Kapellmeister(config)
-    km.run()
+def _term(*_):
+    exit()
 
-    poller = Poller(buffering='line')
-    brain = km.connect("brain")
-    poller.register(brain)
 
-    serv = socket.socket()
-    serv.bind((addr, port))
-    addr, port = serv.getsockname()
-    serv.listen()
-    poller.add_server(serv)
-    print("Server started on", addr+':'+str(port))
-    sys.stdout.flush()
+def main(host, port, config):
+    runner = Runner()
 
-    usernames = {}
-    chan2name = {}
-    name2chan = {}
+    sockname = os.path.join(gettempdir(),
+                            "router_{}_socket".format(os.getpid()))
+    runner.add("router", "./router.py",
+               type="socket", socket=sockname)
+    atexit.register(runner.terminate, "router")
+    runner.ensure_running("router",
+                          with_args=["--socket", sockname,
+                                     "--config", config])
 
-    while True:
-        for data, channel in poller.poll():
-            if channel == serv:
-                addr, cl_chan = data
-                chan_name = 'tcp:'+addr[0]+':'+str(addr[1])
-                chan2name[cl_chan] = chan_name
-                name2chan[chan_name] = cl_chan
-                _LOGGER.debug("Added channel %s as %s", cl_chan, chan_name)
-                cl_chan.write(b'Please enter your name> ')
-            elif channel == brain:
-                msg = json.loads(data.decode().strip())
-                _LOGGER.debug("Message from brain: %s", msg)
-                channel_name = msg['to']['channel']
-                chan = name2chan[channel_name]
-                chan.write(b'Niege> '+msg['message'].encode(), b'\n')
-            else:
-                _LOGGER.debug("Got data: %s", repr(data))
-                line = data.decode().strip()
-                if channel not in usernames:
-                    _LOGGER.debug("Sending user name \"%s\" for channel %s", line, channel)
-                    brain.write(json.dumps({"command": "switch-user",
-                                            "user": line}).encode(), b'\n')
-                    presence_msg = {'event': 'presence',
-                                    'from': {'user': line,
-                                             'channel':chan2name[channel]},
-                                    'to': 'brain'}
-                    brain.write(json.dumps(presence_msg).encode(), b'\n')
-                    usernames[channel] = line
-                else:
-                    _LOGGER.debug("Sending message from channel %s", channel)
-                    brain.write(json.dumps({"message": line,
-                                            "from": {"user": usernames[channel],
-                                                     "channel": chan2name[channel]},
-                                            "to": {"user": "niege",
-                                                   "channel": "brain"}}).encode(),
-                                b'\n')
+    tcp.main(sockname, host, port, config)
 
 
 if __name__ == '__main__':
+    signal.signal(signal.SIGTERM, _term)
+
     logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 
     parser = argparse.ArgumentParser(description="pa-server",

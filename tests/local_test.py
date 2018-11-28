@@ -7,6 +7,7 @@ from channels.testing import TestChannel
 
 import local
 
+
 class LocalEndpointTest(unittest.TestCase):
 
     def setUp(self):
@@ -19,7 +20,10 @@ class LocalEndpointTest(unittest.TestCase):
 
     def tearDown(self):
         local.set_stdio(None)
-        local.set_router(None)
+        try:
+            local.set_router(None)
+        except ValueError:
+            pass
         self.stdio.close()
         self.router.close()
 
@@ -62,3 +66,9 @@ class LocalEndpointTest(unittest.TestCase):
 
         data = self.router.get()
         self.assertEqual(data, b'')
+
+    def test_router_disconnected(self):
+        self.router.close()
+
+        with self.assertRaises(SystemExit):
+            local.poll(0.01)

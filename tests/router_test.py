@@ -8,7 +8,7 @@ from tempfile import mkdtemp
 
 from channels import SocketChannel
 
-from core.routing import Router
+from core.routing import BrainDisconnectedException, Router
 from core.testing import FakeBrain
 
 
@@ -150,3 +150,9 @@ class RouterTest(unittest.TestCase):
                                     "channel": "channel"},
                            "to": {"user": "niege",
                                   "channel": "brain"}}])
+
+    def test_brain_gone(self):
+        self.fb.shutdown()
+
+        with self.assertRaises(BrainDisconnectedException):
+            self.router.tick(0.01)

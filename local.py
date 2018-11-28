@@ -23,20 +23,24 @@ _CHANNEL = 'local:'+socket.gethostname()
 
 def set_stdio(channel):
     global _STDIO
-    if _STDIO is not None:
-        _POLLER.unregister(_STDIO)
-    _STDIO = channel
-    if _STDIO is not None:
-        _POLLER.register(_STDIO)
+    try:
+        if _STDIO is not None:
+            _POLLER.unregister(_STDIO)
+    finally:
+        _STDIO = channel
+        if _STDIO is not None:
+            _POLLER.register(_STDIO)
 
 
 def set_router(channel):
     global _ROUTER
-    if _ROUTER is not None:
-        _POLLER.unregister(_ROUTER)
-    _ROUTER = channel
-    if _ROUTER is not None:
-        _POLLER.register(_ROUTER)
+    try:
+        if _ROUTER is not None:
+            _POLLER.unregister(_ROUTER)
+    finally:
+        _ROUTER = channel
+        if _ROUTER is not None:
+            _POLLER.register(_ROUTER)
 
 
 def send_name():
