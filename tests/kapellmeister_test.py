@@ -210,3 +210,20 @@ class KapellmeisterTest(unittest.TestCase):
             km.run(0.1)
 
         km.terminate()
+
+    def test_component_args(self):
+        cfg = '''
+            components:
+              echo:
+                command: echo hello,
+        '''
+        km = Kapellmeister(Config(cfg))
+        km.run(args={"echo": ["world"]})
+
+        channel = km.connect("echo")
+
+        with timeout(1):
+            line = b''
+            while not line.endswith(b'\n'):
+                line += channel.read()
+        self.assertEqual(line, b'hello, world\n')

@@ -49,7 +49,7 @@ class Kapellmeister:
                 raise TimeoutException()
             time.sleep(0.01)
 
-    def run(self, timeout=None):
+    def run(self, timeout=None, args=None):
         self._prepare_temp_files()
         self._substitute_variables()
 
@@ -62,7 +62,10 @@ class Kapellmeister:
             end_time = time.monotonic() + timeout
 
         for component, cfg in self._config.components.items():
-            self._runner.ensure_running(component)
+            component_args = []
+            if args is not None:
+                component_args = args.get(component, [])
+            self._runner.ensure_running(component, with_args=component_args)
             self._started.append(component)
             if 'wait-for' in cfg:
                 self._wait_for(cfg['wait-for'], end_time)
