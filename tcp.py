@@ -3,6 +3,7 @@ import argparse
 import logging
 import socket
 import sys
+import time
 
 from channels import SocketChannel
 
@@ -16,8 +17,17 @@ def main(sockname, host, port):
     addr, port = serv.getsockname()
     serv.listen(0)
 
-    sock = socket.socket(socket.AF_UNIX)
-    sock.connect(sockname)
+    if ':' in sockname:
+        rhost, rport = sockname.split(':')
+        while True:
+            try:
+                sock = socket.create_connection((rhost, int(rport)))
+                break
+            except ConnectionRefusedError:
+                time.sleep(0.1)
+    else:
+        sock = socket.socket(socket.AF_UNIX)
+        sock.connect(sockname)
 
     endpoint = TcpEndpoint(serv, SocketChannel(sock))
     endpoint.send_name()

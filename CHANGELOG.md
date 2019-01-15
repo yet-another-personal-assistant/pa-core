@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Added
 - 'args' parameter for Kapellmeister.run()
+- TCP endpoint can now connect to a TCP socket
 
 ## [0.4.0] - 2018-11-28
 ### Added
