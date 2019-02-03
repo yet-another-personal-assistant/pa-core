@@ -1,3 +1,4 @@
+@skip
 Feature: Remote access
   As a personal assistant user
   I want to be able to greet my personal assistant using inet socket
